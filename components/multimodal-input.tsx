@@ -328,7 +328,8 @@ function PureStopButton({
   return (
     <Button
       data-testid="stop-button"
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      variant="sendButton"
+      size="sendLarge"
       onClick={(event) => {
         event.preventDefault();
         stop();
@@ -336,7 +337,7 @@ function PureStopButton({
       }}
       aria-disabled={false}
     >
-      <StopIcon size={14} />
+      <StopIcon size={18} />
     </Button>
   );
 }
