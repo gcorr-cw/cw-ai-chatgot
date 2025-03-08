@@ -7,12 +7,16 @@ export function AuthForm({
   action,
   children,
   defaultEmail = '',
+  emailLabel = 'Email address',
+  passwordLabel = 'Password',
 }: {
   action: NonNullable<
     string | ((formData: FormData) => void | Promise<void>) | undefined
   >;
   children: React.ReactNode;
   defaultEmail?: string;
+  emailLabel?: string;
+  passwordLabel?: string;
 }) {
   return (
     <Form action={action} className="flex flex-col gap-4 px-4 sm:px-16">
@@ -21,7 +25,7 @@ export function AuthForm({
           htmlFor="email"
           className="text-zinc-600 font-normal dark:text-zinc-400"
         >
-          Email Address
+          {emailLabel}
         </Label>
 
         <Input
@@ -42,7 +46,7 @@ export function AuthForm({
           htmlFor="password"
           className="text-zinc-600 font-normal dark:text-zinc-400"
         >
-          Password
+          {passwordLabel}
         </Label>
 
         <Input
