@@ -10,6 +10,13 @@ export const authConfig = {
     // while this file is also used in non-Node.js environments
   ],
   callbacks: {
+    async signIn({ user }) {
+      // Check if the user's email domain is @centralwcu.org
+      if (!user.email?.endsWith('@centralwcu.org')) {
+        throw new Error('Only @centralwcu.org email addresses are allowed');
+      }
+      return true;
+    },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isOnChat = nextUrl.pathname.startsWith('/');
