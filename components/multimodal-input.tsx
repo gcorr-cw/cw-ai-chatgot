@@ -308,6 +308,7 @@ function PureAttachmentsButton({
         fileInputRef.current?.click();
       }}
       disabled={isLoading}
+      aria-disabled={isLoading}
       variant="ghost"
     >
       <PaperclipIcon size={14} />
@@ -333,6 +334,7 @@ function PureStopButton({
         stop();
         setMessages((messages) => sanitizeUIMessages(messages));
       }}
+      aria-disabled={false}
     >
       <StopIcon size={14} />
     </Button>
@@ -353,14 +355,16 @@ function PureSendButton({
   return (
     <Button
       data-testid="send-button"
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      variant="sendButton"
+      size="sendLarge"
       onClick={(event) => {
         event.preventDefault();
         submitForm();
       }}
       disabled={input.length === 0 || uploadQueue.length > 0}
+      aria-disabled={input.length === 0 || uploadQueue.length > 0}
     >
-      <ArrowUpIcon size={14} />
+      <ArrowUpIcon size={18} />
     </Button>
   );
 }
