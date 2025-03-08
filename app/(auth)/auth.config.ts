@@ -1,22 +1,26 @@
 import type { NextAuthConfig } from 'next-auth';
 
 export const authConfig = {
+  debug: true,
   pages: {
     signIn: '/login',
     newUser: '/',
   },
   providers: [
-    // added later in auth.ts since it requires bcrypt which is only compatible with Node.js
-    // while this file is also used in non-Node.js environments
+    // Make sure your email provider is properly configured here.
   ],
   callbacks: {
     async signIn({ user }) {
-      // Check if the user's email domain is @centralwcu.org
-      if (!user.email?.endsWith('@centralwcu.org')) {
-        throw new Error('Only @centralwcu.org email addresses are allowed');
+      // Log the sign-in attempt
+      console.log('SignIn callback triggered for:', user.email);
+      const email = user.email?.toLowerCase();
+      if (!email || !email.endsWith('@centralwcu.org')) {
+        console.error('Rejected sign in for:', user.email);
+        return false; // Reject the sign in attempt
       }
       return true;
     },
+    // You might want to temporarily disable this callback for testing
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isOnChat = nextUrl.pathname.startsWith('/');

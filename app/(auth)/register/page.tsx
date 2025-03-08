@@ -34,6 +34,11 @@ export default function Page() {
         type: 'error',
         description: 'Failed validating your submission!',
       });
+    } else if (state.status === 'invalid_domain') {
+      toast({
+        type: 'error',
+        description: 'Only @centralwcu.org email addresses are allowed!',
+      });
     } else if (state.status === 'success') {
       toast({ type: 'success', description: 'Account created successfully!' });
 

@@ -48,7 +48,8 @@ export interface RegisterActionState {
     | 'success'
     | 'failed'
     | 'user_exists'
-    | 'invalid_data';
+    | 'invalid_data'
+    | 'invalid_domain';
 }
 
 export const register = async (
@@ -61,14 +62,21 @@ export const register = async (
       password: formData.get('password'),
     });
 
-    const [user] = await getUser(validatedData.email);
+    // Check if the email domain is valid (must be @centralwcu.org)
+    const email = validatedData.email.toLowerCase();
+    if (!email.endsWith('@centralwcu.org')) {
+      console.error('Registration rejected for invalid domain:', email);
+      return { status: 'invalid_domain' };
+    }
+
+    const [user] = await getUser(email);
 
     if (user) {
       return { status: 'user_exists' } as RegisterActionState;
     }
-    await createUser(validatedData.email, validatedData.password);
+    await createUser(email, validatedData.password);
     await signIn('credentials', {
-      email: validatedData.email,
+      email: email,
       password: validatedData.password,
       redirect: false,
     });
