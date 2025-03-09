@@ -19,16 +19,7 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 
-const PurePreviewMessage = ({
-  chatId,
-  message,
-  vote,
-  isLoading,
-  setMessages,
-  reload,
-  isReadonly,
-  index,
-}: {
+interface PurePreviewMessageProps {
   chatId: string;
   message: Message;
   vote: Vote | undefined;
@@ -41,20 +32,35 @@ const PurePreviewMessage = ({
   ) => Promise<string | null | undefined>;
   isReadonly: boolean;
   index: number;
-}) => {
+  isLastUserMessage?: boolean;
+}
+
+const PurePreviewMessage = ({
+  chatId,
+  message,
+  vote,
+  isLoading,
+  setMessages,
+  reload,
+  isReadonly,
+  index,
+  isLastUserMessage = false,
+}: PurePreviewMessageProps) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
   return (
     <AnimatePresence>
       <motion.div
         data-testid={`message-${message.role}-${index}`}
+        // Add the data attribute if this is the last user message.
+        {...(isLastUserMessage ? { 'data-last-user-message': 'true' } : {})}
         className="w-full mx-auto max-w-3xl px-4 group/message"
         initial={{ y: 5, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         data-role={message.role}
       >
         <div
-          className={cn(
+          className={cx(
             'flex gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
             {
               'w-full': mode === 'edit',
