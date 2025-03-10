@@ -38,7 +38,7 @@ function PureChatHeader({
           <TooltipTrigger asChild>
             <Button
               variant="outline"
-              className="order-2 md:order-1 md:px-2 px-2 md:h-fit ml-auto md:ml-0"
+              className="order-1 md:order-1 md:px-2 px-2 md:h-fit"
               onClick={() => {
                 router.push('/');
                 router.refresh();
@@ -55,7 +55,7 @@ function PureChatHeader({
       {!isReadonly && (
         <ModelSelector
           selectedModelId={selectedModelId}
-          className="order-1 md:order-2"
+          className="order-2 md:order-2"
         />
       )}
 
@@ -63,7 +63,7 @@ function PureChatHeader({
         <VisibilitySelector
           chatId={chatId}
           selectedVisibilityType={selectedVisibilityType}
-          className="order-1 md:order-3"
+          className="order-3 md:order-3"
         />
       )}
 
