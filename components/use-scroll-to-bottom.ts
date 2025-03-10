@@ -12,7 +12,7 @@ export function useScrollToBottom<T extends HTMLElement>(): [
   const [isScrollPaused, setIsScrollPaused] = useState(false);
   
   // Enable debug logging to browser console
-  const DEBUG = true;
+  const DEBUG = false;
   
   // ======= SIMPLIFIED AUTOSCROLL STATE MANAGEMENT =======
   // We track all essential state in these simple variables

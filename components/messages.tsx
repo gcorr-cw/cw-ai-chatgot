@@ -47,7 +47,7 @@ function PureMessages({
   useEffect(() => {
     // Only run on initial load when messages exist
     if (messages.length > 0) {
-      console.log('[MESSAGES] Initial load with messages, forcing scroll to bottom');
+      //console.log('[MESSAGES] Initial load with messages, forcing scroll to bottom');
       
       // Use multiple attempts for reliability
       const scrollTimes = [50, 200, 500, 1000];
@@ -71,7 +71,7 @@ function PureMessages({
     
     // If the latest message is from the user, we should force auto-scroll
     if (latestMessage && latestMessage.role === 'user') {
-      console.log('[MESSAGES] User message detected, forcing auto-scroll');
+      //console.log('[MESSAGES] User message detected, forcing auto-scroll');
       
       // Force auto-scroll to be enabled
       forceEnableAutoScroll();
