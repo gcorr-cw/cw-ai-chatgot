@@ -25,11 +25,28 @@ export function useScrollToBottom<T extends HTMLElement>(): [
   const forceResetRequested = useRef<boolean>(false);
   const initialLoad = useRef<boolean>(true);
   
+  // Tooltip detection
+  const isTooltipActive = useRef<boolean>(false);
+  const pendingScroll = useRef<boolean>(false);
+  
   // ======= LOGGING HELPER =======
   const log = useCallback((type: string, message: string, data?: any) => {
     if (!DEBUG) return;
     const timestamp = new Date().toISOString().substring(11, 19);
     console.log(`[${timestamp}][${type}] ${message}`, data !== undefined ? data : '');
+  }, []);
+  
+  // Function to check if a tooltip is currently visible
+  const checkForActiveTooltips = useCallback((): boolean => {
+    // Look for common tooltip elements that are open
+    // This includes both Radix UI tooltips and other common tooltip implementations
+    const tooltips = document.querySelectorAll(
+      '[data-state="open"], ' +          // Radix UI and similar libraries
+      '[role="tooltip"], ' +             // Standard tooltip role
+      '[data-tooltip-open="true"], ' +   // Custom tooltip attribute
+      '.tooltip[style*="display: block"]' // CSS-based tooltips
+    );
+    return tooltips.length > 0;
   }, []);
   
   // ======= CORE AUTO-SCROLL FUNCTIONS =======
@@ -99,11 +116,35 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       return;
     }
     
+    // Don't scroll if tooltips are active, unless it's a forced scroll
+    if (isTooltipActive.current && !forceResetRequested.current) {
+      log('SCROLL', '⚠️ Tooltip active - deferring scroll');
+      pendingScroll.current = true;
+      return;
+    }
+    
+    // Check if we're near the bottom - only auto-scroll if we are
+    // BUT ignore this check for forced scrolls or initial load
+    const container = containerRef.current;
+    const isNearBottom = 
+      Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 200;
+    
+    // For non-forced scrolls, only scroll if we're near the bottom
+    // EXCEPT for initial load or explicit force reset
+    if (!forceResetRequested.current && !initialLoad.current && !isNearBottom) {
+      log('SCROLL', '⚠️ Not near bottom - skipping non-forced scroll');
+      return;
+    }
+    
     // Mark that we're doing a programmatic scroll to avoid triggering scroll handlers
     programmaticScrolling.current = true;
     
     try {
-      log('SCROLL', `⬇️ Scrolling to bottom (${behavior})`);
+      log('SCROLL', `⬇️ Scrolling to bottom (${behavior})`, {
+        forced: forceResetRequested.current,
+        initialLoad: initialLoad.current
+      });
+      
       endRef.current.scrollIntoView({
         behavior,
         block: 'end',
@@ -117,6 +158,8 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       log('ERROR', 'Error during scroll', error);
       programmaticScrolling.current = false;
     }
+    
+    pendingScroll.current = false;
   }, [log]);
   
   // ======= PUBLIC API =======
@@ -128,16 +171,24 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       wasAutoScrollDisabled: !autoScrollEnabled.current,
       currentResponseId: currentResponseId.current,
       initialLoad: initialLoad.current,
-      isInDisabledList: isAutoScrollDisabledForCurrentResponse()
+      isInDisabledList: isAutoScrollDisabledForCurrentResponse(),
+      isTooltipActive: isTooltipActive.current,
+      forceRequested: forceResetRequested.current
     });
     
     // If force reset was requested (from UI button or manual user action)
     if (forceResetRequested.current) {
       log('API', '🔄 Force reset requested - clearing all disabled responses');
       disabledResponseIds.current.clear();
+      autoScrollEnabled.current = true; // Ensure this is true
+      setIsScrollPaused(false);         // Update UI state
+      userScrolledManually.current = false;
+      
+      // Always use 'auto' behavior for force resets to ensure it happens immediately
+      performScrollToBottom('auto');
+      
+      // Reset the force request flag AFTER we've done the scroll
       forceResetRequested.current = false;
-      enableAutoScroll();
-      performScrollToBottom(immediate ? 'auto' : 'smooth');
       return;
     }
     
@@ -163,8 +214,7 @@ export function useScrollToBottom<T extends HTMLElement>(): [
   const forceEnableAutoScroll = useCallback(() => {
     log('FORCE', '🔓 Force enabling auto-scroll');
     forceResetRequested.current = true;
-    disabledResponseIds.current.clear();
-    scrollToBottom(true);
+    scrollToBottom(true); // Pass true for immediate scroll
   }, [scrollToBottom, log]);
   
   // ======= EFFECTS =======
@@ -232,6 +282,32 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       // Skip empty mutation batches
       if (mutations.length === 0) return;
       
+      // Skip if tooltips are active
+      if (isTooltipActive.current) {
+        log('MUTATION', '⚠️ Tooltip active - skipping mutation handling');
+        return;
+      }
+      
+      // Filter out tooltip-related mutations and other UI interactions
+      const significantMutations = mutations.filter(mutation => {
+        // Skip tooltip-related mutations
+        const target = mutation.target as Element;
+        if (!(target instanceof Element)) return true;
+        
+        const isTooltipRelated = 
+          target.hasAttribute('data-state') || 
+          target.closest('[data-state]') !== null ||
+          target.hasAttribute('role') && target.getAttribute('role') === 'tooltip' ||
+          target.closest('[role="tooltip"]') !== null;
+        
+        return !isTooltipRelated;
+      });
+      
+      if (significantMutations.length === 0) {
+        log('MUTATION', 'Filtered out all mutations as UI-related');
+        return;
+      }
+      
       const now = Date.now();
       
       // First mutation after a while indicates a new message stream
@@ -247,7 +323,7 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       lastMessageChangeTime = now;
       
       log('MUTATION', 'Content changed', { 
-        mutations: mutations.length,
+        mutations: significantMutations.length,
         messageChangeCount,
         autoScrollEnabled: autoScrollEnabled.current,
         currentResponseId: currentResponseId.current,
@@ -272,29 +348,112 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       childList: true,
       subtree: true,
       characterData: true,
-      attributes: true
+      attributes: false  // Reduce noise by not watching attributes
     });
     
     return () => {
       observer.disconnect();
       log('CLEANUP', 'Disconnected mutation observer');
     };
-  }, [generateNewResponseId, isAutoScrollDisabledForCurrentResponse, log, performScrollToBottom]);
+  }, [generateNewResponseId, isAutoScrollDisabledForCurrentResponse, log, performScrollToBottom, checkForActiveTooltips]);
+  
+  // Monitor tooltip state to prevent scrolling during tooltip interactions
+  useEffect(() => {
+    log('SETUP', 'Setting up tooltip detection');
+    
+    const checkTooltipInterval = setInterval(() => {
+      const tooltipActive = checkForActiveTooltips();
+      
+      // If tooltip state changed, log it
+      if (tooltipActive !== isTooltipActive.current) {
+        log('TOOLTIP', tooltipActive ? '🔍 Tooltip became active' : '🔍 Tooltip became inactive');
+      }
+      
+      // If tooltip state changed from active to inactive, and we have a pending scroll
+      if (isTooltipActive.current && !tooltipActive && pendingScroll.current) {
+        log('TOOLTIP', '⏩ Processing pending scroll after tooltip closed');
+        setTimeout(() => performScrollToBottom('auto'), 50); // Small delay to ensure tooltip is fully gone
+      }
+      
+      isTooltipActive.current = tooltipActive;
+    }, 100);
+    
+    return () => {
+      clearInterval(checkTooltipInterval);
+      log('CLEANUP', 'Removed tooltip detection');
+    };
+  }, [log, checkForActiveTooltips, performScrollToBottom]);
   
   // Initial setup
   useEffect(() => {
     log('INIT', 'useScrollToBottom initialized');
     initialLoad.current = true;
     
-    // Do an initial scroll to the bottom
-    setTimeout(() => {
-      performScrollToBottom('auto');
-    }, 100);
+    // Track if we've successfully scrolled on initial load
+    let initialScrollComplete = false;
     
+    // More robust initial scroll handling with multiple attempts
+    const attemptInitialScroll = () => {
+      if (!initialLoad.current || initialScrollComplete) return;
+      
+      const container = containerRef.current;
+      const end = endRef.current;
+      
+      if (container && end) {
+        log('INIT', '⬇️ Attempting initial scroll to bottom');
+        
+        // Check if container has any meaningful content to scroll
+        if (container.scrollHeight > window.innerHeight) {
+          initialScrollComplete = true;
+          scrollToBottom(true);
+        } else {
+          log('INIT', '⚠️ Container not ready for scroll yet, will retry');
+        }
+      }
+    };
+    
+    // Try immediately if DOM is already loaded
+    if (document.readyState === 'complete') {
+      attemptInitialScroll();
+    }
+    
+    // Listen for DOM content loaded event
+    const handleDOMContentLoaded = () => {
+      log('INIT', '📄 DOM Content Loaded - attempting scroll');
+      attemptInitialScroll();
+    };
+    
+    // Listen for load event (all resources loaded)
+    const handleWindowLoad = () => {
+      log('INIT', '🌐 Window Load - attempting scroll');
+      attemptInitialScroll();
+    };
+    
+    // Multiple attempts with increasing delays
+    const scrollAttempts = [100, 500, 1000, 2000];
+    const scrollTimers: number[] = [];
+    
+    scrollAttempts.forEach(delay => {
+      const timer = window.setTimeout(() => {
+        log('INIT', `⏱️ Timed attempt (${delay}ms) to scroll to bottom`);
+        attemptInitialScroll();
+      }, delay);
+      scrollTimers.push(timer);
+    });
+    
+    // Set up event listeners
+    document.addEventListener('DOMContentLoaded', handleDOMContentLoaded);
+    window.addEventListener('load', handleWindowLoad);
+    
+    // Cleanup all timers and event listeners
     return () => {
       log('CLEANUP', 'useScrollToBottom unmounting');
+      
+      scrollTimers.forEach(timer => clearTimeout(timer));
+      document.removeEventListener('DOMContentLoaded', handleDOMContentLoaded);
+      window.removeEventListener('load', handleWindowLoad);
     };
-  }, [log, performScrollToBottom]);
+  }, [log, scrollToBottom]);
   
   return [containerRef, endRef, isScrollPaused, scrollToBottom, forceEnableAutoScroll];
 }
