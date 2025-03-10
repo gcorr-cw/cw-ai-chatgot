@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
+import { useAttachments } from '@/lib/hooks/use-attachments';
 
 interface PurePreviewMessageProps {
   chatId: string;
@@ -47,6 +48,9 @@ const PurePreviewMessage = ({
   isLastUserMessage = false,
 }: PurePreviewMessageProps) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const { attachments: refreshedAttachments, isLoading: isAttachmentsLoading } = useAttachments(
+    message.experimental_attachments
+  );
 
   return (
     <AnimatePresence>
@@ -77,15 +81,16 @@ const PurePreviewMessage = ({
           )}
 
           <div className="flex flex-col gap-4 w-full">
-            {message.experimental_attachments && (
+            {refreshedAttachments && refreshedAttachments.length > 0 && (
               <div
                 data-testid={`message-attachments-${index}`}
                 className="flex flex-row justify-end gap-2"
               >
-                {message.experimental_attachments.map((attachment) => (
+                {refreshedAttachments.map((attachment) => (
                   <PreviewAttachment
                     key={attachment.url}
                     attachment={attachment}
+                    isUploading={isAttachmentsLoading}
                   />
                 ))}
               </div>

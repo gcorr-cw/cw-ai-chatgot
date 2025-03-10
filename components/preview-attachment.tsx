@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import type { Attachment } from 'ai';
 
 import { LoaderIcon } from './icons';
@@ -9,7 +10,46 @@ export const PreviewAttachment = ({
   attachment: Attachment;
   isUploading?: boolean;
 }) => {
-  const { name, url, contentType } = attachment;
+  const { name, url: initialUrl, contentType } = attachment;
+  const [url, setUrl] = useState(initialUrl);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(false);
+
+  // Function to refresh the URL if it expires
+  const refreshUrl = async () => {
+    if (!name) return;
+    
+    try {
+      setIsRefreshing(true);
+      const response = await fetch('/api/files/refresh-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pathname: name }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUrl(data.url);
+        setError(false);
+      } else {
+        setError(true);
+      }
+    } catch (err) {
+      console.error('Failed to refresh attachment URL:', err);
+      setError(true);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Handle image load errors (potentially expired URLs)
+  const handleImageError = async () => {
+    if (!isRefreshing && !error) {
+      await refreshUrl();
+    }
+  };
 
   return (
     <div data-testid="input-attachment-preview" className="flex flex-col gap-2">
@@ -23,6 +63,7 @@ export const PreviewAttachment = ({
               src={url}
               alt={name ?? 'An image attachment'}
               className="rounded-md size-full object-cover"
+              onError={handleImageError}
             />
           ) : (
             <div className="" />
@@ -31,7 +72,7 @@ export const PreviewAttachment = ({
           <div className="" />
         )}
 
-        {isUploading && (
+        {(isUploading || isRefreshing) && (
           <div
             data-testid="input-attachment-loader"
             className="animate-spin absolute text-zinc-500"
