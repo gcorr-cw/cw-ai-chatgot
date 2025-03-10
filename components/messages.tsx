@@ -43,6 +43,46 @@ function PureMessages({
     return m.role === 'user' ? idx : acc;
   }, -1);
 
+  // Force initial scroll to bottom when messages are loaded
+  useEffect(() => {
+    // Only run on initial load when messages exist
+    if (messages.length > 0) {
+      console.log('[MESSAGES] Initial load with messages, forcing scroll to bottom');
+      
+      // Use multiple attempts for reliability
+      const scrollTimes = [50, 200, 500, 1000];
+      scrollTimes.forEach(time => {
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            // Force scroll to the very bottom of the container directly
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            forceEnableAutoScroll(); // Also reset the auto-scroll state
+          }
+        }, time);
+      });
+    }
+  }, []);  // Empty dependency array = only run once on mount
+
+  // This useEffect handles detecting when a new user message is added
+  // and forces auto-scroll to be enabled (fixing the primary bug)
+  useEffect(() => {
+    // Find the latest user message
+    const latestMessage = messages[messages.length - 1];
+    
+    // If the latest message is from the user, we should force auto-scroll
+    if (latestMessage && latestMessage.role === 'user') {
+      console.log('[MESSAGES] User message detected, forcing auto-scroll');
+      
+      // Force auto-scroll to be enabled
+      forceEnableAutoScroll();
+      
+      // Use direct scrollTop method for the most immediate effect
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    }
+  }, [messages.length]); // Only run when the number of messages changes
+
   // Update the messages container position when it changes
   useEffect(() => {
     if (!messagesContainerRef.current) return;
