@@ -28,6 +28,7 @@ import { PreviewAttachment } from './preview-attachment';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
+import SpeechRecognitionButton from './speech-recognition-button';
 import equal from 'fast-deep-equal';
 
 function PureMultimodalInput({
@@ -264,6 +265,24 @@ function PureMultimodalInput({
 
       <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
         <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading} />
+        <SpeechRecognitionButton 
+          onTranscript={(text) => {
+            // Update the input value with the new transcript
+            setInput(input + (input ? ' ' : '') + text);
+            
+            // Force a layout update by using setTimeout
+            setTimeout(() => {
+              if (textareaRef.current) {
+                // Ensure the height adjusts properly
+                adjustHeight();
+                
+                // Force focus on the textarea to ensure proper layout
+                textareaRef.current.focus();
+              }
+            }, 0);
+          }}
+          isLoading={isLoading} 
+        />
       </div>
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
@@ -311,7 +330,7 @@ function PureAttachmentsButton({
       aria-disabled={isLoading}
       variant="ghost"
     >
-      <PaperclipIcon size={14} />
+      <PaperclipIcon size={18} />
     </Button>
   );
 }
