@@ -98,41 +98,76 @@ export function convertToUIMessages(
 
     let textContent = '';
     let reasoning: string | undefined = undefined;
+    let experimental_attachments = undefined;
     const toolInvocations: Array<ToolInvocation> = [];
 
+    // Simple string content
     if (typeof message.content === 'string') {
       textContent = message.content;
-    } else if (Array.isArray(message.content)) {
-      for (const content of message.content) {
-        if (content.type === 'text') {
-          textContent += content.text;
-        } else if (content.type === 'tool-call') {
-          toolInvocations.push({
-            state: 'call',
-            toolCallId: content.toolCallId,
-            toolName: content.toolName,
-            args: content.args,
-          });
-        } else if (content.type === 'reasoning') {
-          reasoning = content.reasoning;
+    } 
+    // Object content that might contain text and attachments
+    else if (typeof message.content === 'object' && message.content !== null) {
+      // Check if content has text property (our custom format)
+      if ('text' in message.content) {
+        textContent = message.content.text as string;
+      }
+      
+      // Extract experimental_attachments from the content object
+      if ('experimental_attachments' in message.content && message.content.experimental_attachments) {
+        experimental_attachments = message.content.experimental_attachments;
+      }
+      
+      // Handle array content for tool calls or multi-part messages
+      if (Array.isArray(message.content)) {
+        for (const content of message.content) {
+          if (typeof content === 'object' && content !== null) {
+            // Extract attachments from our custom type
+            if (content.type === 'attachments' && 'experimental_attachments' in content) {
+              experimental_attachments = content.experimental_attachments;
+            }
+            // Handle regular AI message parts
+            else if ('type' in content) {
+              if (content.type === 'text') {
+                textContent += content.text;
+              } else if (content.type === 'tool-call') {
+                toolInvocations.push({
+                  state: 'call',
+                  toolCallId: content.toolCallId,
+                  toolName: content.toolName,
+                  args: content.args,
+                });
+              } else if (content.type === 'reasoning') {
+                reasoning = content.reasoning;
+              }
+            }
+          }
         }
       }
     }
 
-    chatMessages.push({
+    // Create the UI message
+    const uiMessage: Message = {
       id: message.id,
       role: message.role as Message['role'],
       content: textContent,
       reasoning,
       toolInvocations,
-    });
+    };
+    
+    // Add the experimental_attachments to the message
+    if (experimental_attachments) {
+      (uiMessage as any).experimental_attachments = experimental_attachments;
+    }
+    // Fallback: Check if message has top-level experimental_attachments (for backward compatibility)
+    else if ('experimental_attachments' in message && message.experimental_attachments) {
+      (uiMessage as any).experimental_attachments = message.experimental_attachments;
+    }
 
+    chatMessages.push(uiMessage);
+    
     return chatMessages;
   }, []);
 }
-
-type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;
-type ResponseMessage = ResponseMessageWithoutId & { id: string };
 
 export function sanitizeResponseMessages({
   messages,
@@ -167,8 +202,9 @@ export function sanitizeResponseMessages({
     );
 
     if (reasoning) {
-      // @ts-expect-error: reasoning message parts in sdk is wip
-      sanitizedContent.push({ type: 'reasoning', reasoning });
+      // This is intentional - reasoning message parts are a work in progress in the SDK
+      // Adding type assertion to prevent TypeScript error
+      sanitizedContent.push({ type: 'reasoning', reasoning } as any);
     }
 
     return {
@@ -229,3 +265,6 @@ export function getDocumentTimestampByIndex(
 
   return documents[index].createdAt;
 }
+
+type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;
+type ResponseMessage = ResponseMessageWithoutId & { id: string };

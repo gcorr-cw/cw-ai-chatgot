@@ -7,9 +7,12 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
+// Get the AWS region from environment variables, defaulting to us-west-2 if not specified
+const awsRegion = process.env.AWS_REGION || 'us-west-2';
+
 // S3 client with IAM role authentication (uses AWS SDK's default credentials provider chain)
 const s3Client = new S3Client({
-  region: 'us-west-2', // Specify your AWS region here
+  region: awsRegion,
 });
 
 const bucketName = process.env.S3_BUCKET_NAME;
@@ -19,7 +22,8 @@ if (!bucketName) {
 }
 
 /**
- * Uploads a file to S3 and returns the file metadata
+ * Uploads a file to S3 and returns the file metadata in the same format as Vercel Blob
+ * to maintain compatibility with the existing application
  */
 export async function uploadToS3(
   fileBuffer: ArrayBuffer, 
@@ -74,12 +78,12 @@ export async function deleteFromS3(pathname: string): Promise<void> {
  * Generates a presigned URL for a file in S3
  * This is useful for temporary access to files
  */
-export async function getS3PresignedUrl(pathname: string): Promise<string> {
+export async function getS3PresignedUrl(pathname: string, expiresIn: number = 3600): Promise<string> {
   const getObjectParams = {
     Bucket: bucketName,
     Key: pathname,
   };
   
-  const url = await getSignedUrl(s3Client, new GetObjectCommand(getObjectParams), { expiresIn: 3600 });
+  const url = await getSignedUrl(s3Client, new GetObjectCommand(getObjectParams), { expiresIn });
   return url;
 }

@@ -66,8 +66,21 @@ export async function POST(request: Request) {
       }
     }
 
+    // Create a copy of the user message with attachments properly serialized for database storage
+    const messageForDb = {
+      ...userMessage,
+      createdAt: new Date(),
+      chatId: id,
+      // Ensure content includes the attachment metadata so it's stored in the JSON field
+      content: typeof userMessage.content === 'string' 
+        ? { text: userMessage.content, experimental_attachments: userMessage.experimental_attachments } 
+        : Array.isArray(userMessage.content)
+          ? [...userMessage.content, { type: 'attachments', experimental_attachments: userMessage.experimental_attachments }]
+          : { text: String(userMessage.content), experimental_attachments: userMessage.experimental_attachments }
+    };
+
     await saveMessages({
-      messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
+      messages: [messageForDb],
     });
 
     return createDataStreamResponse({

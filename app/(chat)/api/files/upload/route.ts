@@ -52,9 +52,14 @@ export async function POST(request: Request) {
 
     try {
       // Upload to S3 instead of Vercel Blob
-      const data = await uploadToS3(fileBuffer, filename, file.type);
-
-      return NextResponse.json(data);
+      const result = await uploadToS3(fileBuffer, filename, file.type);
+      
+      // Format response in the exact format expected by the multimodal component
+      return NextResponse.json({
+        url: result.url,
+        pathname: result.pathname,
+        contentType: result.contentType
+      });
     } catch (error) {
       console.error('S3 upload error:', error);
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
