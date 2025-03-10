@@ -11,9 +11,10 @@ interface SuggestedActionsProps {
     message: Message | CreateMessage,
     chatRequestOptions?: ChatRequestOptions,
   ) => Promise<string | null | undefined>;
+  visible?: boolean;
 }
 
-function PureSuggestedActions({ chatId, append }: SuggestedActionsProps) {
+function PureSuggestedActions({ chatId, append, visible = true }: SuggestedActionsProps) {
   const suggestedActions = [
     {
       title: 'What are the advantages',
@@ -36,6 +37,10 @@ function PureSuggestedActions({ chatId, append }: SuggestedActionsProps) {
       action: 'What is the weather in San Francisco?',
     },
   ];
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <div
