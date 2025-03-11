@@ -5,7 +5,7 @@ import { auth } from '@/app/(auth)/auth';
 import { getS3PresignedUrl } from '@/lib/s3-service';
 
 const GetAttachmentsSchema = z.object({
-  pathnames: z.array(z.string())
+  pathnames: z.array(z.string()) // Can contain pathnames or objectNames
 });
 
 /**
@@ -37,8 +37,14 @@ export async function POST(request: Request) {
       // Generate fresh presigned URLs for all attachments
       const attachmentPromises = pathnames.map(async (pathname) => {
         try {
+          // pathname could be an objectName or a pathname
           const url = await getS3PresignedUrl(pathname);
-          return { pathname, url, success: true };
+          return { 
+            pathname, // Keep the original key used
+            url,
+            objectName: pathname, // Use the supplied key as objectName for consistency
+            success: true 
+          };
         } catch (error) {
           console.error(`Failed to get URL for ${pathname}:`, error);
           return { pathname, success: false };

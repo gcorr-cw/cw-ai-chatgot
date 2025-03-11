@@ -146,6 +146,7 @@ function PureMultimodalInput({
     formData.append('file', file);
 
     try {
+      console.log(`Uploading file ${file.name} to API...`);
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
@@ -153,17 +154,26 @@ function PureMultimodalInput({
 
       if (response.ok) {
         const data = await response.json();
-        const { url, pathname, contentType } = data;
+        console.log('Upload response data:', {
+          ...data,
+          url: data.url?.substring(0, 30) + '...'
+        });
+        
+        // Extract all relevant fields from the response, including objectName and name
+        const { url, pathname, contentType, objectName, name } = data;
 
         return {
           url,
-          name: pathname,
-          contentType: contentType,
+          pathname, // Keep pathname for backward compatibility
+          objectName, // Include the unique S3 object key
+          name: name || pathname, // Use original filename if available, fall back to pathname
+          contentType,
         };
       }
       const { error } = await response.json();
       toast.error(error);
     } catch (error) {
+      console.error('File upload error:', error);
       toast.error('Failed to upload file, please try again!');
     }
   };

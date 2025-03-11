@@ -25,6 +25,7 @@ import { getWeather } from '@/lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '@/lib/constants';
 import { NextResponse } from 'next/server';
 import { myProvider } from '@/lib/ai/providers';
+import { ExtendedAttachment } from '@/lib/types/attachment';
 
 export const maxDuration = 60;
 
@@ -73,10 +74,60 @@ export async function POST(request: Request) {
       chatId: id,
       // Ensure content includes the attachment metadata so it's stored in the JSON field
       content: typeof userMessage.content === 'string' 
-        ? { text: userMessage.content, experimental_attachments: userMessage.experimental_attachments } 
+        ? { 
+            text: userMessage.content, 
+            experimental_attachments: userMessage.experimental_attachments 
+              ? userMessage.experimental_attachments.map(attachment => {
+                  const extAttachment = attachment as ExtendedAttachment;
+                  // Log incoming attachment data
+                  console.log('Processing attachment for storage:', {
+                    name: attachment.name,
+                    objectName: extAttachment.objectName,
+                    pathname: extAttachment.pathname,
+                    contentType: attachment.contentType,
+                    url: attachment.url?.substring(0, 30) + '...'
+                  });
+                  
+                  return {
+                    ...attachment,
+                    // Explicitly include objectName if it exists
+                    ...(extAttachment.objectName && { objectName: extAttachment.objectName }),
+                    // Ensure original name is preserved
+                    name: attachment.name || (extAttachment.pathname ? extAttachment.pathname.split('/').pop() : 'File')
+                  };
+                })
+              : []
+          } 
         : Array.isArray(userMessage.content)
-          ? [...userMessage.content, { type: 'attachments', experimental_attachments: userMessage.experimental_attachments }]
-          : { text: String(userMessage.content), experimental_attachments: userMessage.experimental_attachments }
+          ? [
+              ...userMessage.content, 
+              { 
+                type: 'attachments', 
+                experimental_attachments: userMessage.experimental_attachments 
+                  ? userMessage.experimental_attachments.map(attachment => {
+                      const extAttachment = attachment as ExtendedAttachment;
+                      return {
+                        ...attachment,
+                        ...(extAttachment.objectName && { objectName: extAttachment.objectName }),
+                        name: attachment.name || (extAttachment.pathname ? extAttachment.pathname.split('/').pop() : 'File')
+                      };
+                    })
+                  : []
+              }
+            ]
+          : { 
+              text: String(userMessage.content), 
+              experimental_attachments: userMessage.experimental_attachments 
+                ? userMessage.experimental_attachments.map(attachment => {
+                    const extAttachment = attachment as ExtendedAttachment;
+                    return {
+                      ...attachment,
+                      ...(extAttachment.objectName && { objectName: extAttachment.objectName }),
+                      name: attachment.name || (extAttachment.pathname ? extAttachment.pathname.split('/').pop() : 'File')
+                    };
+                  })
+                : []
+            }
     };
 
     await saveMessages({
@@ -89,6 +140,7 @@ export async function POST(request: Request) {
         // Log all attachments for debugging
         console.log('Processing attachments:', message.experimental_attachments.map(a => ({
           name: a.name,
+          objectName: (a as ExtendedAttachment).objectName,
           contentType: a.contentType,
           url: a.url.substring(0, 50) + '...' // Truncate URL for readability
         })));
@@ -151,11 +203,14 @@ export async function POST(request: Request) {
         
         // Process text file attachments - fetch their content and include it directly
         if (textAttachments.length > 0) {
-          const textContentsPromises = textAttachments.map(async attachment => {
+          console.log(`Processing ${textAttachments.length} text attachments`);
+          
+          // Prepare to fetch content from each text attachment
+          const textContentsPromises = textAttachments.map(async (attachment) => {
             try {
-              console.log(`Fetching text content from: ${attachment.url.substring(0, 50)}...`);
-              // Fetch the text content from the URL
+              // Use attachment.url to fetch the content
               const response = await fetch(attachment.url);
+              
               if (!response.ok) {
                 console.error(`Failed to fetch text content: ${response.status} ${response.statusText}`);
                 throw new Error(`Failed to fetch text content from ${attachment.url}`);
@@ -163,7 +218,9 @@ export async function POST(request: Request) {
               
               const textContent = await response.text();
               console.log(`Successfully fetched ${textContent.length} characters of text content`);
-              const fileName = attachment.name?.split('/').pop() || 'file.txt';
+              // Use the original filename for display
+              const extAttachment = attachment as ExtendedAttachment;
+              const fileName = attachment.name || (extAttachment.pathname ? extAttachment.pathname.split('/').pop() : 'file.txt');
               
               return `\n\nContent of ${fileName}:\n\`\`\`\n${textContent}\n\`\`\``;
             } catch (error) {
@@ -188,7 +245,7 @@ export async function POST(request: Request) {
             if (!attachment.name) {
               return `[File: Unknown (${attachment.contentType || 'unknown'})]`;
             }
-            const fileName = attachment.name.split('/').pop() || attachment.name;
+            const fileName = attachment.name;
             return `[File: ${fileName} (${attachment.contentType || 'unknown'})]`;
           }).join('\n');
           

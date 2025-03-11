@@ -19,6 +19,7 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import { useAttachments } from '@/lib/hooks/use-attachments';
+import { ExtendedAttachment } from '@/lib/types/attachment';
 
 interface PurePreviewMessageProps {
   chatId: string;

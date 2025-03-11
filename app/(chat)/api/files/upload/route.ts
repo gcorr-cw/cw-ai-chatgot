@@ -140,52 +140,62 @@ export async function POST(request: Request) {
 
     // Get filename from formData since Blob doesn't have name property
     const filename = file.name;
-    const fileBuffer = await file.arrayBuffer();
-
-    try {
-      // Determine if we need to use a corrected content type
-      let contentType = file.type;
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    console.log(`Uploading file: ${filename}, size: ${fileBuffer.length} bytes, content-type: ${file.type}`);
+    
+    // Determine if we need to use a corrected content type
+    let contentType = file.type;
+    
+    // For files with application/octet-stream MIME type, determine the proper type from extension
+    if (file instanceof File && (!contentType || contentType === 'application/octet-stream')) {
+      const fileExtension = filename.split('.').pop()?.toLowerCase() || '';
       
-      // For files with application/octet-stream MIME type, determine the proper type from extension
-      if (file instanceof File && (!contentType || contentType === 'application/octet-stream')) {
-        const fileExtension = filename.split('.').pop()?.toLowerCase() || '';
-        
-        // Map common extensions to MIME types
-        const mimeTypeMap: Record<string, string> = {
-          'md': 'text/markdown',
-          'markdown': 'text/markdown',
-          'txt': 'text/plain',
-          'csv': 'text/csv',
-          'json': 'application/json',
-          'html': 'text/html',
-          'htm': 'text/html',
-          'rtf': 'application/rtf',
-          'log': 'text/plain'
-        };
-        
-        if (mimeTypeMap[fileExtension]) {
-          contentType = mimeTypeMap[fileExtension];
-          console.log(`Corrected content type for ${fileExtension} file: ${contentType}`);
-        }
+      // Map common extensions to MIME types
+      const mimeTypeMap: Record<string, string> = {
+        'md': 'text/markdown',
+        'markdown': 'text/markdown',
+        'txt': 'text/plain',
+        'csv': 'text/csv',
+        'json': 'application/json',
+        'html': 'text/html',
+        'htm': 'text/html',
+        'rtf': 'application/rtf',
+        'log': 'text/plain'
+      };
+      
+      if (mimeTypeMap[fileExtension]) {
+        contentType = mimeTypeMap[fileExtension];
+        console.log(`Corrected content type for ${fileExtension} file: ${contentType}`);
       }
-      
-      // Upload to S3 with potentially corrected content type
-      const uploadResult = await uploadToS3(
-        fileBuffer,
-        filename,
-        contentType
-      );
-      
-      // Format response in the exact format expected by the multimodal component
-      return NextResponse.json({
-        url: uploadResult.url,
-        pathname: uploadResult.pathname,
-        contentType: uploadResult.contentType
-      });
-    } catch (error) {
-      console.error('S3 upload error:', error);
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
     }
+    
+    // Upload to S3 with potentially corrected content type
+    console.log(`Uploading file: ${file.name}, content-type: ${contentType}`);
+    const uploadResult = await uploadToS3(
+      fileBuffer,
+      filename,
+      contentType
+    );
+    
+    console.log('S3 upload result:', {
+      url: uploadResult.url.substring(0, 50) + '...',
+      pathname: uploadResult.pathname,
+      objectName: uploadResult.objectName,
+      name: uploadResult.name,
+      contentType: uploadResult.contentType
+    });
+
+    // Format response with explicit properties to match the expected structure
+    // Note: The AI SDK expects specific fields for attachments
+    return NextResponse.json({
+      url: uploadResult.url,
+      pathname: uploadResult.pathname,
+      objectName: uploadResult.objectName, // Make sure this is explicitly included
+      name: uploadResult.name, // Include original filename
+      contentType: uploadResult.contentType,
+      // Add any missing properties that AI SDK attachment type might expect
+      size: file.size,
+    });
   } catch (error) {
     console.error('Request processing error:', error);
     return NextResponse.json(

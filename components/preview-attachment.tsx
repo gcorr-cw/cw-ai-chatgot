@@ -9,6 +9,8 @@ import {
   LoaderIcon,
   TrashIcon
 } from './icons';
+import { FileText } from 'lucide-react';
+import { ExtendedAttachment } from '@/lib/types/attachment';
 
 // Helper function to get the appropriate icon for a file type
 const getFileIcon = (contentType: string | undefined) => {
@@ -16,16 +18,24 @@ const getFileIcon = (contentType: string | undefined) => {
   
   if (contentType.startsWith('image/')) return <ImageIcon size={20} />;
   
+  // PDF and document files
   if (contentType === 'application/pdf' ||
       contentType === 'application/msword' ||
-      contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      contentType === 'text/plain' ||
-      contentType === 'text/markdown' ||
-      contentType === 'text/richtext' ||
-      contentType === 'application/rtf') {
+      contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     return <FileIcon size={20} />;
   }
   
+  // Text files including markdown - using the FileText icon from lucide
+  if (contentType === 'text/plain' ||
+      contentType === 'text/markdown' ||
+      contentType === 'text/richtext' ||
+      contentType === 'application/rtf' ||
+      contentType.includes('markdown') ||
+      contentType.includes('/md')) {
+    return <FileText size={30} />;
+  }
+  
+  // Rest of function remains the same
   if (contentType === 'application/vnd.ms-excel' ||
       contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
       contentType === 'text/csv') {
@@ -48,10 +58,16 @@ const getFileIcon = (contentType: string | undefined) => {
   return <FileIcon size={20} />;
 };
 
-// Get the file name from the pathname
-const getFileName = (pathname: string | undefined) => {
-  if (!pathname) return 'File';
-  const parts = pathname.split('/');
+// Get the file name from the attachment
+const getFileName = (attachment: ExtendedAttachment) => {
+  // If name is available, use it directly (original filename)
+  if (attachment.name) return attachment.name;
+  
+  // Fallback to extracting name from pathname or objectName
+  const pathOrObject = attachment.pathname || attachment.objectName;
+  if (!pathOrObject) return 'File';
+  
+  const parts = pathOrObject.split('/');
   return parts[parts.length - 1];
 };
 
@@ -60,11 +76,11 @@ export const PreviewAttachment = ({
   isUploading = false,
   onDelete
 }: {
-  attachment: Attachment;
+  attachment: ExtendedAttachment;
   isUploading?: boolean;
   onDelete?: () => void;
 }) => {
-  const { name, url: initialUrl, contentType } = attachment;
+  const { name, url: initialUrl, contentType, objectName, pathname } = attachment;
   const [url, setUrl] = useState(initialUrl);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(false);
@@ -72,7 +88,9 @@ export const PreviewAttachment = ({
 
   // Function to refresh the URL if it expires
   const refreshUrl = async () => {
-    if (!name) return;
+    // Use objectName if available, otherwise fall back to pathname or name
+    const objectKey = objectName || pathname || name;
+    if (!objectKey) return;
     
     try {
       setIsRefreshing(true);
@@ -81,7 +99,10 @@ export const PreviewAttachment = ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ pathname: name }),
+        body: JSON.stringify({ 
+          pathname: objectKey,
+          objectName: objectKey 
+        }),
       });
 
       if (response.ok) {
@@ -107,7 +128,8 @@ export const PreviewAttachment = ({
   };
 
   const isImage = contentType?.startsWith('image/');
-  const fileName = getFileName(name);
+  // Get file name, using name directly if available
+  const fileName = getFileName(attachment);
 
   return (
     <div 
@@ -132,7 +154,7 @@ export const PreviewAttachment = ({
             href={url} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="w-full h-full flex items-center justify-center hover:bg-zinc-200 transition-colors"
+            className="w-full h-full flex items-center justify-center hover:bg-zinc-400/70 transition-colors"
             title={`Open ${fileName}`}
           >
             {getFileIcon(contentType)}
@@ -150,7 +172,7 @@ export const PreviewAttachment = ({
             className="absolute top-0.5 right-0.5 bg-zinc-800/70 hover:bg-zinc-900/90 text-white rounded-full p-0.5 size-5 flex items-center justify-center z-10 transition-all"
             aria-label="Delete attachment"
           >
-            <TrashIcon size={12} />
+            <TrashIcon size={14} />
           </button>
         )}
 
@@ -163,7 +185,7 @@ export const PreviewAttachment = ({
           </div>
         )}
       </div>
-      <div className="text-xs text-zinc-500 max-w-16 truncate" title={fileName}>{fileName}</div>
+      <div className="text-xs text-zinc-500 max-w-20 truncate" title={fileName}>{fileName}</div>
     </div>
   );
 };
