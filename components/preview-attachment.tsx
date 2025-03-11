@@ -6,7 +6,8 @@ import {
   CodeIcon,
   InfoIcon,
   GlobeIcon,
-  LoaderIcon
+  LoaderIcon,
+  TrashIcon
 } from './icons';
 
 // Helper function to get the appropriate icon for a file type
@@ -57,14 +58,17 @@ const getFileName = (pathname: string | undefined) => {
 export const PreviewAttachment = ({
   attachment,
   isUploading = false,
+  onDelete
 }: {
   attachment: Attachment;
   isUploading?: boolean;
+  onDelete?: () => void;
 }) => {
   const { name, url: initialUrl, contentType } = attachment;
   const [url, setUrl] = useState(initialUrl);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
 
   // Function to refresh the URL if it expires
   const refreshUrl = async () => {
@@ -106,7 +110,12 @@ export const PreviewAttachment = ({
   const fileName = getFileName(name);
 
   return (
-    <div data-testid="input-attachment-preview" className="flex flex-col gap-2">
+    <div 
+      data-testid="input-attachment-preview" 
+      className="flex flex-col gap-2"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
       <div className="w-20 h-16 aspect-video bg-muted rounded-md relative flex flex-col items-center justify-center overflow-hidden">
         {isImage ? (
           // NOTE: it is recommended to use next/image for images
@@ -128,6 +137,21 @@ export const PreviewAttachment = ({
           >
             {getFileIcon(contentType)}
           </a>
+        )}
+
+        {/* Delete button that appears on hover */}
+        {isHovering && onDelete && !isUploading && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="absolute top-0.5 right-0.5 bg-zinc-800/70 hover:bg-zinc-900/90 text-white rounded-full p-0.5 size-5 flex items-center justify-center z-10 transition-all"
+            aria-label="Delete attachment"
+          >
+            <TrashIcon size={12} />
+          </button>
         )}
 
         {(isUploading || isRefreshing) && (
