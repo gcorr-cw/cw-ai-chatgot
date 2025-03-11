@@ -82,13 +82,148 @@ export async function POST(request: Request) {
     await saveMessages({
       messages: [messageForDb],
     });
+ 
+    // Process messages to ensure attachments are properly formatted
+    const processedMessages = await Promise.all(messages.map(async message => {
+      if (message.experimental_attachments && message.experimental_attachments.length > 0) {
+        // Log all attachments for debugging
+        console.log('Processing attachments:', message.experimental_attachments.map(a => ({
+          name: a.name,
+          contentType: a.contentType,
+          url: a.url.substring(0, 50) + '...' // Truncate URL for readability
+        })));
+        
+        // Handle different types of attachments
+        const imageAttachments = message.experimental_attachments.filter(
+          attachment => attachment.contentType?.startsWith('image/')
+        );
+        
+        // Text attachments should be fetched and included directly
+        // Include both text/ types and markdown with various MIME types
+        const textAttachments = message.experimental_attachments.filter(
+          attachment => {
+            const contentType = attachment.contentType?.toLowerCase() || '';
+            const fileName = attachment.name?.toLowerCase() || '';
+            const fileExtension = fileName.split('.').pop() || '';
+            
+            // Check if it's a text file by MIME type or extension
+            const isTextByMimeType = contentType.startsWith('text/') || 
+                                     contentType.includes('markdown') || 
+                                     contentType.includes('/md') ||
+                                     (contentType === 'application/rtf');
+                                     
+            // For octet-stream files, check the extension
+            const isTextByExtension = contentType === 'application/octet-stream' && 
+                                     ['md', 'markdown', 'txt', 'csv', 'json', 'html', 'htm', 'rtf', 'log'].includes(fileExtension);
+            
+            return isTextByMimeType || isTextByExtension;
+          }
+        );
+        
+        console.log('Identified text attachments:', textAttachments.length);
+        
+        // Other non-image, non-text attachments
+        const otherAttachments = message.experimental_attachments.filter(
+          attachment => {
+            const contentType = attachment.contentType?.toLowerCase() || '';
+            const fileName = attachment.name?.toLowerCase() || '';
+            const fileExtension = fileName.split('.').pop() || '';
+            
+            // Check if it's an image file
+            const isImageFile = contentType.startsWith('image/');
+            
+            // Check if it's a text file by MIME type or extension
+            const isTextByMimeType = contentType.startsWith('text/') || 
+                                    contentType.includes('markdown') || 
+                                    contentType.includes('/md') ||
+                                    (contentType === 'application/rtf');
+                                    
+            // For octet-stream files, check the extension
+            const isTextByExtension = contentType === 'application/octet-stream' && 
+                                    ['md', 'markdown', 'txt', 'csv', 'json', 'html', 'htm', 'rtf', 'log'].includes(fileExtension);
+            
+            // Return true if this is neither an image nor a text file
+            return !isImageFile && !(isTextByMimeType || isTextByExtension);
+          }
+        );
+        
+        let processedContent = message.content;
+        
+        // Process text file attachments - fetch their content and include it directly
+        if (textAttachments.length > 0) {
+          const textContentsPromises = textAttachments.map(async attachment => {
+            try {
+              console.log(`Fetching text content from: ${attachment.url.substring(0, 50)}...`);
+              // Fetch the text content from the URL
+              const response = await fetch(attachment.url);
+              if (!response.ok) {
+                console.error(`Failed to fetch text content: ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to fetch text content from ${attachment.url}`);
+              }
+              
+              const textContent = await response.text();
+              console.log(`Successfully fetched ${textContent.length} characters of text content`);
+              const fileName = attachment.name?.split('/').pop() || 'file.txt';
+              
+              return `\n\nContent of ${fileName}:\n\`\`\`\n${textContent}\n\`\`\``;
+            } catch (error) {
+              console.error('Error fetching text file content:', error);
+              return `\n\n[Failed to fetch content of ${attachment.name || 'text file'}]`;
+            }
+          });
+          
+          const textContents = await Promise.all(textContentsPromises);
+          
+          // Add text file contents to the message
+          if (typeof processedContent === 'string') {
+            processedContent = `${processedContent}${textContents.join('')}`;
+            console.log('Updated message content with text attachments.');
+          }
+        }
+        
+        // If there are other non-image, non-text attachments, add them as text references
+        if (otherAttachments.length > 0) {
+          const attachmentText = otherAttachments.map(attachment => {
+            // Handle potentially undefined name
+            if (!attachment.name) {
+              return `[File: Unknown (${attachment.contentType || 'unknown'})]`;
+            }
+            const fileName = attachment.name.split('/').pop() || attachment.name;
+            return `[File: ${fileName} (${attachment.contentType || 'unknown'})]`;
+          }).join('\n');
+          
+          if (typeof processedContent === 'string') {
+            processedContent = `${processedContent}\n\nAttached files:\n${attachmentText}`;
+          }
+        }
+        
+        return {
+          ...message,
+          content: processedContent,
+          experimental_attachments: imageAttachments.length > 0 ? imageAttachments : undefined
+        };
+      }
+      return message;
+    }));
+
+    // Build our final messages array for the AI
+    const finalMessages = [...processedMessages];
+    
+    // Log the final messages being sent to OpenAI (truncated for readability)
+    console.log('Sending to OpenAI:', finalMessages.map(msg => ({
+      role: msg.role,
+      content: typeof msg.content === 'string' 
+        ? (msg.content.length > 100 ? msg.content.substring(0, 100) + '...' : msg.content)
+        : Array.isArray(msg.content) ? 'Complex content with attachments' : msg.content,
+      hasAttachments: msg.experimental_attachments && msg.experimental_attachments.length > 0
+    })));
 
     return createDataStreamResponse({
       execute: (dataStream) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel }),
-          messages,
+          messages: finalMessages,
           maxSteps: 5,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'

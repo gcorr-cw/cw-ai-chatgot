@@ -1,7 +1,58 @@
 import { useState, useEffect } from 'react';
 import type { Attachment } from 'ai';
+import {
+  FileIcon,
+  ImageIcon,
+  CodeIcon,
+  InfoIcon,
+  GlobeIcon,
+  LoaderIcon
+} from './icons';
 
-import { LoaderIcon } from './icons';
+// Helper function to get the appropriate icon for a file type
+const getFileIcon = (contentType: string | undefined) => {
+  if (!contentType) return <FileIcon size={20} />;
+  
+  if (contentType.startsWith('image/')) return <ImageIcon size={20} />;
+  
+  if (contentType === 'application/pdf' ||
+      contentType === 'application/msword' ||
+      contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      contentType === 'text/plain' ||
+      contentType === 'text/markdown' ||
+      contentType === 'text/richtext' ||
+      contentType === 'application/rtf') {
+    return <FileIcon size={20} />;
+  }
+  
+  if (contentType === 'application/vnd.ms-excel' ||
+      contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      contentType === 'text/csv') {
+    return <FileIcon size={20} />;
+  }
+  
+  if (contentType === 'application/vnd.ms-powerpoint' ||
+      contentType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+    return <FileIcon size={20} />;
+  }
+  
+  if (contentType === 'text/html' || contentType === 'application/xml') {
+    return <CodeIcon size={20} />;
+  }
+  
+  if (contentType === 'application/json') {
+    return <CodeIcon size={20} />;
+  }
+  
+  return <FileIcon size={20} />;
+};
+
+// Get the file name from the pathname
+const getFileName = (pathname: string | undefined) => {
+  if (!pathname) return 'File';
+  const parts = pathname.split('/');
+  return parts[parts.length - 1];
+};
 
 export const PreviewAttachment = ({
   attachment,
@@ -51,25 +102,32 @@ export const PreviewAttachment = ({
     }
   };
 
+  const isImage = contentType?.startsWith('image/');
+  const fileName = getFileName(name);
+
   return (
     <div data-testid="input-attachment-preview" className="flex flex-col gap-2">
-      <div className="w-20 h-16 aspect-video bg-muted rounded-md relative flex flex-col items-center justify-center">
-        {contentType ? (
-          contentType.startsWith('image') ? (
-            // NOTE: it is recommended to use next/image for images
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={url}
-              src={url}
-              alt={name ?? 'An image attachment'}
-              className="rounded-md size-full object-cover"
-              onError={handleImageError}
-            />
-          ) : (
-            <div className="" />
-          )
+      <div className="w-20 h-16 aspect-video bg-muted rounded-md relative flex flex-col items-center justify-center overflow-hidden">
+        {isImage ? (
+          // NOTE: it is recommended to use next/image for images
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={url}
+            src={url}
+            alt={name ?? 'An image attachment'}
+            className="rounded-md size-full object-cover"
+            onError={handleImageError}
+          />
         ) : (
-          <div className="" />
+          <a 
+            href={url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="w-full h-full flex items-center justify-center hover:bg-zinc-200 transition-colors"
+            title={`Open ${fileName}`}
+          >
+            {getFileIcon(contentType)}
+          </a>
         )}
 
         {(isUploading || isRefreshing) && (
@@ -81,7 +139,7 @@ export const PreviewAttachment = ({
           </div>
         )}
       </div>
-      <div className="text-xs text-zinc-500 max-w-16 truncate">{name}</div>
+      <div className="text-xs text-zinc-500 max-w-16 truncate" title={fileName}>{fileName}</div>
     </div>
   );
 };
