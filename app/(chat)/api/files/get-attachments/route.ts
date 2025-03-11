@@ -5,12 +5,12 @@ import { auth } from '@/app/(auth)/auth';
 import { getS3PresignedUrl } from '@/lib/s3-service';
 
 const GetAttachmentsSchema = z.object({
-  pathnames: z.array(z.string()) // Can contain pathnames or objectNames
+  // We rename the array from "pathnames" to "objectNames"
+  objectNames: z.array(z.string()),
 });
 
 /**
- * Endpoint to get fresh presigned URLs for multiple attachments at once
- * This is useful when loading a chat with multiple attachments
+ * Endpoint to get fresh presigned URLs for multiple attachments at once.
  */
 export async function POST(request: Request) {
   const session = await auth();
@@ -27,34 +27,31 @@ export async function POST(request: Request) {
       const errorMessage = validatedData.error.errors
         .map((error) => error.message)
         .join(', ');
-
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    const { pathnames } = validatedData.data;
-    
+    const { objectNames } = validatedData.data;
+
     try {
       // Generate fresh presigned URLs for all attachments
-      const attachmentPromises = pathnames.map(async (pathname) => {
+      const attachmentPromises = objectNames.map(async (objectName) => {
         try {
-          // pathname could be an objectName or a pathname
-          const url = await getS3PresignedUrl(pathname);
-          return { 
-            pathname, // Keep the original key used
+          const url = await getS3PresignedUrl(objectName);
+          return {
+            objectName,
             url,
-            objectName: pathname, // Use the supplied key as objectName for consistency
-            success: true 
+            success: true,
           };
         } catch (error) {
-          console.error(`Failed to get URL for ${pathname}:`, error);
-          return { pathname, success: false };
+          console.error(`Failed to get URL for ${objectName}:`, error);
+          return { objectName, success: false };
         }
       });
-      
+
       const results = await Promise.all(attachmentPromises);
-      
-      return NextResponse.json({ 
-        attachments: results.filter(result => result.success) 
+
+      return NextResponse.json({
+        attachments: results.filter((result) => result.success),
       });
     } catch (error) {
       console.error('Failed to get attachment URLs:', error);

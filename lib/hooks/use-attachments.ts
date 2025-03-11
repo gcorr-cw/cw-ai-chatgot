@@ -2,11 +2,18 @@ import { useState, useEffect } from 'react';
 import type { Attachment } from 'ai';
 
 /**
- * Hook to manage attachments with server-side URL refreshing
- * This ensures all S3 interactions happen through the server, not client-side
+ * We rely on a single field objectName for S3 key references.
  */
-export function useAttachments(initialAttachments?: Attachment[]) {
-  const [attachments, setAttachments] = useState<Attachment[]>(initialAttachments || []);
+interface ExtendedAttachment extends Attachment {
+  objectName?: string;
+}
+
+/**
+ * Hook to manage attachments with server-side URL refreshing.
+ * This ensures all S3 interactions happen through the server, not client-side.
+ */
+export function useAttachments(initialAttachments?: ExtendedAttachment[]) {
+  const [attachments, setAttachments] = useState<ExtendedAttachment[]>(initialAttachments || []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,24 +24,39 @@ export function useAttachments(initialAttachments?: Attachment[]) {
       return;
     }
 
+    console.log(
+      'useAttachments - Initial attachments:',
+      initialAttachments.map((a) => ({
+        name: a.name,
+        objectName: a.objectName,
+        contentType: a.contentType,
+        url: a.url?.substring(0, 30) + '...',
+      }))
+    );
+
+    setAttachments(initialAttachments);
+
     const refreshAttachmentUrls = async () => {
-      // Only process attachments that have a name (pathname)
-      const pathnames = initialAttachments
-        .map(attachment => attachment.name)
+      // We'll build an array of the objectName or fallback to the attachment's name
+      const objectNames = initialAttachments
+        .map((attachment) => attachment.objectName || attachment.name)
         .filter(Boolean) as string[];
-      
-      if (pathnames.length === 0) return;
+
+      console.log('useAttachments - Object names to refresh:', objectNames);
+
+      if (objectNames.length === 0) return;
 
       setIsLoading(true);
       setError(null);
 
       try {
+        // Call our updated endpoint with "objectNames" instead of pathnames
         const response = await fetch('/api/files/get-attachments', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ pathnames }),
+          body: JSON.stringify({ objectNames }),
         });
 
         if (!response.ok) {
@@ -42,21 +64,22 @@ export function useAttachments(initialAttachments?: Attachment[]) {
         }
 
         const { attachments: refreshedAttachments } = await response.json();
-        
+
         // Update attachments with fresh URLs
         setAttachments(
-          initialAttachments.map(attachment => {
+          initialAttachments.map((attachment) => {
+            const objectKey = attachment.objectName || attachment.name;
             const refreshed = refreshedAttachments.find(
-              (item: any) => item.pathname === attachment.name
+              (item: any) => item.objectName === objectKey
             );
-            
+
             if (refreshed) {
               return {
                 ...attachment,
-                url: refreshed.url
+                url: refreshed.url,
               };
             }
-            
+
             return attachment;
           })
         );
