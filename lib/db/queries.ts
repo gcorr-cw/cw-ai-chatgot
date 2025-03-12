@@ -341,7 +341,25 @@ export async function updateChatVisiblityById({
   try {
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (error) {
-    console.error('Failed to update chat visibility in database');
+    console.error('Failed to update chat visibility in database', error);
+    throw error;
+  }
+}
+
+export async function updateChatTitle({
+  id,
+  title,
+}: {
+  id: string;
+  title: string;
+}) {
+  try {
+    return await db
+      .update(chat)
+      .set({ title })
+      .where(eq(chat.id, id));
+  } catch (error) {
+    console.error('Failed to update chat title in database', error);
     throw error;
   }
 }

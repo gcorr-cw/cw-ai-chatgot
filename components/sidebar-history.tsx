@@ -13,6 +13,7 @@ import {
   GlobeIcon,
   LockIcon,
   MoreHorizontalIcon,
+  PencilEditIcon,
   ShareIcon,
   TrashIcon,
 } from '@/components/icons';
@@ -26,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +76,37 @@ const PureChatItem = ({
     chatId: chat.id,
     initialVisibility: chat.visibility,
   });
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [newTitle, setNewTitle] = useState(chat.title);
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  const handleRename = async () => {
+    if (!newTitle.trim()) return;
+    
+    setIsRenaming(true);
+    try {
+      const response = await fetch(`/api/chat?id=${chat.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      
+      if (response.ok) {
+        toast.success('Chat renamed successfully');
+        // Update the chat title in the UI
+        chat.title = newTitle;
+      } else {
+        toast.error('Failed to rename chat');
+      }
+    } catch (error) {
+      toast.error('An error occurred while renaming the chat');
+    } finally {
+      setIsRenaming(false);
+      setShowRenameDialog(false);
+    }
+  };
 
   return (
     <SidebarMenuItem>
@@ -94,6 +128,17 @@ const PureChatItem = ({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent side="bottom" align="end">
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onSelect={() => {
+              setNewTitle(chat.title);
+              setShowRenameDialog(true);
+            }}
+          >
+            <PencilEditIcon />
+            <span>Rename</span>
+          </DropdownMenuItem>
+
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="cursor-pointer">
               <ShareIcon />
@@ -140,6 +185,36 @@ const PureChatItem = ({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <AlertDialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename Chat</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a new title for this chat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Enter new title"
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowRenameDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRename}
+              disabled={isRenaming || !newTitle.trim() || newTitle === chat.title}
+            >
+              {isRenaming ? 'Renaming...' : 'Rename'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarMenuItem>
   );
 };
