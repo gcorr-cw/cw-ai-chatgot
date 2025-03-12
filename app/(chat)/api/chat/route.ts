@@ -153,8 +153,16 @@ export async function POST(request: Request) {
             }))
           )
 
+          // Check if we're using Claude model
+          const isClaudeModel = selectedChatModel === 'claude-sonnet';
+
           const imageAttachments = message.experimental_attachments.filter(
             (attachment) => attachment.contentType?.startsWith('image/')
+          )
+
+          // Identify PDF attachments for special handling with Claude
+          const pdfAttachments = message.experimental_attachments.filter(
+            (attachment) => attachment.contentType === 'application/pdf'
           )
 
           // Identify text-based attachments
@@ -163,6 +171,11 @@ export async function POST(request: Request) {
               const contentType = attachment.contentType?.toLowerCase() || ''
               const fileName = attachment.name?.toLowerCase() || ''
               const fileExtension = fileName.split('.').pop() || ''
+
+              // Skip PDFs when using Claude as they'll be handled specially
+              if (isClaudeModel && contentType === 'application/pdf') {
+                return false;
+              }
 
               const isTextByMimeType =
                 contentType.startsWith('text/') ||
@@ -187,12 +200,15 @@ export async function POST(request: Request) {
               return isTextByMimeType || isTextByExtension
             }
           )
+          
+          // Other attachments (not images, not text, and not PDFs when using Claude)
           const otherAttachments = message.experimental_attachments.filter(
             (attachment) => {
               const contentType = attachment.contentType?.toLowerCase() || ''
               const fileName = attachment.name?.toLowerCase() || ''
               const fileExtension = fileName.split('.').pop() || ''
               const isImageFile = contentType.startsWith('image/')
+              const isPdfFile = contentType === 'application/pdf'
               const isTextByMimeType =
                 contentType.startsWith('text/') ||
                 contentType.includes('markdown') ||
@@ -211,6 +227,12 @@ export async function POST(request: Request) {
                   'rtf',
                   'log',
                 ].includes(fileExtension)
+              
+              // For Claude, PDFs are handled separately and shouldn't be in "other"
+              if (isClaudeModel && isPdfFile) {
+                return false;
+              }
+              
               return !isImageFile && !(isTextByMimeType || isTextByExtension)
             }
           )
@@ -265,6 +287,35 @@ export async function POST(request: Request) {
             }
           }
 
+          // For Claude model, we need to prepare a different message format with multimodal content
+          if (isClaudeModel && (imageAttachments.length > 0 || pdfAttachments.length > 0)) {
+            console.log('Preparing multimodal content for Claude model');
+            
+            // For Claude, we'll use a special format in the message content
+            // We'll include a note about attachments in the text content
+            let claudeContent = typeof processedContent === 'string' 
+              ? processedContent 
+              : '';
+            
+            // Add notes about the attachments
+            if (imageAttachments.length > 0) {
+              claudeContent += `\n\n[Note: This message includes ${imageAttachments.length} image attachment(s) that will be processed by Claude directly]`;
+            }
+            
+            if (pdfAttachments.length > 0) {
+              claudeContent += `\n\n[Note: This message includes ${pdfAttachments.length} PDF document(s) that will be processed by Claude directly]`;
+            }
+            
+            // We'll use the experimental_attachments field to pass the attachments to Claude
+            // The AI SDK will handle the conversion to the proper format for Claude
+            return {
+              ...message,
+              content: claudeContent,
+              experimental_attachments: [...imageAttachments, ...pdfAttachments]
+            };
+          }
+
+          // For non-Claude models or when no special attachments are present
           return {
             ...message,
             content: processedContent,

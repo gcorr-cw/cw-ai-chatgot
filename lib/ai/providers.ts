@@ -5,6 +5,7 @@ import {
 } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { fireworks } from '@ai-sdk/fireworks';
+import { anthropic } from '@ai-sdk/anthropic';
 import { isTestEnvironment } from '../constants';
 import {
   artifactModel,
@@ -21,6 +22,7 @@ export const myProvider = isTestEnvironment
         'chat-model-reasoning': reasoningModel,
         'title-model': titleModel,
         'artifact-model': artifactModel,
+        'claude-sonnet': chatModel,
       },
     })
   : customProvider({
@@ -33,6 +35,7 @@ export const myProvider = isTestEnvironment
         }),
         'title-model': openai('gpt-4-turbo'),
         'artifact-model': openai('gpt-4o-mini'),
+        'claude-sonnet': anthropic('claude-3-5-sonnet-20241022'),
       },
       imageModels: {
         'small-model': openai.image('dall-e-2'),
