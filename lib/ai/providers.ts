@@ -4,7 +4,6 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { fireworks } from '@ai-sdk/fireworks';
 import { anthropic } from '@ai-sdk/anthropic';
 import { isTestEnvironment } from '../constants';
 import {
