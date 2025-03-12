@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from 'next-auth';
 
 export const authConfig = {
-  debug: true,
+  debug: false,
   pages: {
     signIn: '/login',
     newUser: '/',
@@ -10,17 +10,17 @@ export const authConfig = {
     // Make sure your email provider is properly configured here.
   ],
   callbacks: {
-    async signIn({ user }) {
-      // Log the sign-in attempt
-      console.log('SignIn callback triggered for:', user.email);
-      const email = user.email?.toLowerCase();
-      if (!email || !email.endsWith('@centralwcu.org')) {
-        console.error('Rejected sign in for:', user.email);
-        return false; // Reject the sign in attempt
-      }
-      return true;
-    },
-    // You might want to temporarily disable this callback for testing
+    // async signIn({ user }) {
+    //   // Log the sign-in attempt
+    //   console.log('SignIn callback triggered for:', user.email);
+    //   const email = user.email?.toLowerCase();
+    //   if (!email || !email.endsWith('@centralwcu.org')) {
+    //     console.error('Rejected sign in for:', user.email);
+    //     return false; // Reject the sign in attempt
+    //   }
+    //   return true;
+    // },
+    // // You might want to temporarily disable this callback for testing
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isOnChat = nextUrl.pathname.startsWith('/');

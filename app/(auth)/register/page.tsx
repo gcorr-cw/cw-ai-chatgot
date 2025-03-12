@@ -37,7 +37,8 @@ export default function Page() {
     } else if (state.status === 'invalid_domain') {
       toast({
         type: 'error',
-        description: 'Only @centralwcu.org email addresses are allowed!',
+        // description: 'Only @centralwcu.org email addresses are allowed!',
+        description: 'Not authorized beta test user - Contact Grady',
       });
     } else if (state.status === 'success') {
       toast({ type: 'success', description: 'Account created successfully!' });

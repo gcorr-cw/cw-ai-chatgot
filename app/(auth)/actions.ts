@@ -62,10 +62,22 @@ export const register = async (
       password: formData.get('password'),
     });
 
-    // Check if the email domain is valid (must be @centralwcu.org)
+    // Check if the email is in the allowed list
     const email = validatedData.email.toLowerCase();
     if (!email.endsWith('@centralwcu.org')) {
       console.error('Registration rejected for invalid domain:', email);
+      return { status: 'invalid_domain' };
+    }
+    
+    // Get the username part of the email (before @)
+    const username = email.split('@')[0];
+    
+    // Get the allowed usernames from environment variable
+    const allowedUsernames = process.env.ALLOWED_USERNAMES?.split(',').map(u => u.trim()) || [];
+    
+    // Check if the username is in the allowed list
+    if (allowedUsernames.length > 0 && !allowedUsernames.includes(username)) {
+      console.error('Registration rejected for unauthorized email:', email);
       return { status: 'invalid_domain' };
     }
 

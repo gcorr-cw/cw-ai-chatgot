@@ -33,7 +33,7 @@ export function AuthForm({
           name="email"
           className="bg-muted text-md md:text-sm"
           type="email"
-          placeholder="user@acme.com"
+          placeholder="username@centralwcu.org"
           autoComplete="email"
           required
           autoFocus
