@@ -1,4 +1,4 @@
-export const DEFAULT_CHAT_MODEL: string = 'chat-model-small';
+export const DEFAULT_CHAT_MODEL: string = 'chat-model-large';
 
 interface ChatModel {
   id: string;
