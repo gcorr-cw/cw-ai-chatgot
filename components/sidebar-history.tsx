@@ -1,6 +1,7 @@
 'use client';
 
 import { isToday, isYesterday, subMonths, subWeeks } from 'date-fns';
+import { format } from 'date-fns';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import type { User } from 'next-auth';
@@ -52,6 +53,12 @@ import {
 import type { Chat } from '@/lib/db/schema';
 import { fetcher } from '@/lib/utils';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type GroupedChats = {
   today: Chat[];
@@ -79,6 +86,8 @@ const PureChatItem = ({
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [newTitle, setNewTitle] = useState(chat.title);
   const [isRenaming, setIsRenaming] = useState(false);
+
+  const formattedDate = format(new Date(chat.createdAt), 'MMM d, yyyy h:mm a');
 
   const handleRename = async () => {
     if (!newTitle.trim()) return;
@@ -110,11 +119,21 @@ const PureChatItem = ({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive}>
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
-          <span>{chat.title}</span>
-        </Link>
-      </SidebarMenuButton>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <SidebarMenuButton asChild isActive={isActive}>
+              <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
+                <span className="truncate">{chat.title}</span>
+              </Link>
+            </SidebarMenuButton>
+          </TooltipTrigger>
+          <TooltipContent side="right" align="start" className="flex flex-col">
+            <span>{chat.title}</span>
+            <span className="text-xs text-foreground/50">{formattedDate}</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
@@ -168,7 +187,7 @@ const PureChatItem = ({
                 >
                   <div className="flex flex-row gap-2 items-center">
                     <GlobeIcon />
-                    <span>Public</span>
+                    <span>Shared</span>
                   </div>
                   {visibilityType === 'public' ? <CheckCircleFillIcon /> : null}
                 </DropdownMenuItem>

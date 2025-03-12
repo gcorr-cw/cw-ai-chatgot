@@ -34,8 +34,8 @@ const visibilities: Array<{
   },
   {
     id: 'public',
-    label: 'Public',
-    description: 'Anyone with the link can access this chat',
+    label: 'Shared',
+    description: 'Any employee with the link can access this chat',
     icon: <GlobeIcon />,
   },
 ];
