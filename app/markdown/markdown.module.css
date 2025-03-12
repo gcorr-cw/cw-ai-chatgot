@@ -1,0 +1,39 @@
+.pastebin {
+  opacity: 0.01;
+  width: 100%;
+  height: 1px;
+  overflow: hidden;
+}
+
+.output {
+  border: none;
+  background: transparent;
+  font-family: Consolas, "Liberation Mono", Courier, monospace;
+  font-size: 13px;
+  line-height: 19px;
+  min-height: 78vh;
+  overflow: auto;
+  padding: 6px 10px;
+  resize: none;
+  width: 100%;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .darkModeContainer { 
+    background-color: #222; 
+    color: white; 
+  }
+  
+  .code {
+    color: #ff7a9c;
+    background-color: #0e0609;
+  }
+  
+  .link {
+    color: #8fcbff;
+  }
+}
