@@ -114,6 +114,11 @@ function PureMultimodalInput({
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
     adjustHeight();
+       // Stop speech recognition if it's active when the user types
+       if (speechRecognitionRef.current?.isRecording()) {
+        console.log('Stopping speech recognition due to manual text input');
+        speechRecognitionRef.current.stopRecording();
+      }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
