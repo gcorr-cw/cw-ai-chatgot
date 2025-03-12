@@ -28,7 +28,7 @@ import { PreviewAttachment } from './preview-attachment';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
-import SpeechRecognitionButton from './speech-recognition-button';
+import SpeechRecognitionButton, { SpeechRecognitionRef } from './speech-recognition-button';
 import equal from 'fast-deep-equal';
 
 function PureMultimodalInput({
@@ -68,6 +68,7 @@ function PureMultimodalInput({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
+  const speechRecognitionRef = useRef<SpeechRecognitionRef>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -120,6 +121,12 @@ function PureMultimodalInput({
 
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
+
+    // Stop speech recognition if it's active
+    if (speechRecognitionRef.current?.isRecording()) {
+      console.log('Stopping speech recognition before submitting message');
+      speechRecognitionRef.current.stopRecording();
+    }
 
     handleSubmit(undefined, {
       experimental_attachments: attachments,
@@ -288,6 +295,7 @@ function PureMultimodalInput({
       <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
         <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading} />
         <SpeechRecognitionButton 
+          ref={speechRecognitionRef}
           onTranscript={(text) => {
             // Update the input value with the new transcript
             setInput(input + (input ? ' ' : '') + text);

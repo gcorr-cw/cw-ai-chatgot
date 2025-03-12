@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { MicrophoneIcon } from '@/components/icons-microphone'
 
@@ -61,10 +61,16 @@ interface SpeechRecognitionProps {
   isLoading: boolean
 }
 
-const SpeechRecognitionButton: React.FC<SpeechRecognitionProps> = ({
+// Define the ref interface
+export interface SpeechRecognitionRef {
+  stopRecording: () => void;
+  isRecording: () => boolean;
+}
+
+const SpeechRecognitionButton = forwardRef<SpeechRecognitionRef, SpeechRecognitionProps>(({
   onTranscript,
   isLoading
-}) => {
+}, ref) => {
   const [isListening, setIsListening] = useState(false)
   const [isSupported, setIsSupported] = useState(true)
   const recognitionRef = useRef<SpeechRecognitionInterface | null>(null)
@@ -148,6 +154,17 @@ const SpeechRecognitionButton: React.FC<SpeechRecognitionProps> = ({
     // Force state update
     setIsListening(false);
   }, []);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    stopRecording: () => {
+      if (isListening) {
+        console.log('Stopping recording via ref method');
+        forceStopRecognition();
+      }
+    },
+    isRecording: () => isListening
+  }), [forceStopRecognition, isListening]);
 
   // Start listening function
   const startListening = useCallback(() => {
@@ -280,6 +297,8 @@ const SpeechRecognitionButton: React.FC<SpeechRecognitionProps> = ({
       <MicrophoneIcon size={18} />
     </Button>
   )
-}
+});
+
+SpeechRecognitionButton.displayName = 'SpeechRecognitionButton';
 
 export default SpeechRecognitionButton
