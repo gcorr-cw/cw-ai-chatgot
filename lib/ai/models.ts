@@ -15,16 +15,16 @@ export const chatModels: Array<ChatModel> = [
   {
     id: 'chat-model-large',
     name: 'GPT 4o',
-    description: 'For complex, multi-step tasks',
+    description: 'Complex tasks & image uploads',
   },
   {
     id: 'chat-model-reasoning',
-    name: 'Reasoning model',
-    description: 'Uses advanced reasoning',
+    name: 'GPT o3 mini',
+    description: 'Very complex reasoning tasks',
   },
   {
     id: 'claude-sonnet',
     name: 'Claude 3.5 Sonnet',
-    description: 'Supports PDF uploads',
+    description: 'Complex tasks & PDF uploads',
   },
 ];
