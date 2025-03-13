@@ -29,6 +29,8 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import SpeechRecognitionButton, { SpeechRecognitionRef } from './speech-recognition-button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Code, EllipsisVertical, FileText, Image, MenuIcon, Table } from 'lucide-react';
 import equal from 'fast-deep-equal';
 
 function PureMultimodalInput({
@@ -114,11 +116,11 @@ function PureMultimodalInput({
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
     adjustHeight();
-       // Stop speech recognition if it's active when the user types
-       if (speechRecognitionRef.current?.isRecording()) {
-        console.log('Stopping speech recognition due to manual text input');
-        speechRecognitionRef.current.stopRecording();
-      }
+    // Stop speech recognition if it's active when the user types
+    if (speechRecognitionRef.current?.isRecording()) {
+      console.log('Stopping speech recognition due to manual text input');
+      speechRecognitionRef.current.stopRecording();
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -170,7 +172,7 @@ function PureMultimodalInput({
           ...data,
           url: data.url?.substring(0, 30) + '...'
         });
-        
+
         // Extract all relevant fields from the response, including objectName and name
         const { url, pathname, contentType, objectName, name } = data;
 
@@ -299,25 +301,58 @@ function PureMultimodalInput({
 
       <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
         <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading} />
-        <SpeechRecognitionButton 
+        <SpeechRecognitionButton
           ref={speechRecognitionRef}
           onTranscript={(text) => {
             // Update the input value with the new transcript
             setInput(input + (input ? ' ' : '') + text);
-            
+
             // Force a layout update by using setTimeout
             setTimeout(() => {
               if (textareaRef.current) {
                 // Ensure the height adjusts properly
                 adjustHeight();
-                
+
                 // Force focus on the textarea to ensure proper layout
                 textareaRef.current.focus();
               }
             }, 0);
           }}
-          isLoading={isLoading} 
+          isLoading={isLoading}
         />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+              disabled={isLoading}
+              aria-disabled={isLoading}
+            >
+              <EllipsisVertical size={18} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <div className="px-2 py-1.5 text-sm font-semibold">Generate:</div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Code className="mr-2 h-4 w-4" />
+              Code
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Image className="mr-2 h-4 w-4" />
+              Images
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Table className="mr-2 h-4 w-4" />
+              Sheets
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <FileText className="mr-2 h-4 w-4" />
+              Docs
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
@@ -419,7 +454,7 @@ function PureSendButton({
       disabled={input.length === 0 || uploadQueue.length > 0}
       aria-disabled={input.length === 0 || uploadQueue.length > 0}
     >
-      <ArrowUpIcon size={18} />
+      <ArrowUpIcon size={12} />
     </Button>
   );
 }

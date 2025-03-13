@@ -515,7 +515,7 @@ export const InfoIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const ArrowUpIcon = ({ size = 16 }: { size?: number }) => {
+export const ArrowUpIcon = ({ size = 12 }: { size?: number }) => {
   return (
     <svg
       height={size}
@@ -525,10 +525,28 @@ export const ArrowUpIcon = ({ size = 16 }: { size?: number }) => {
       style={{ color: 'currentcolor' }}
     >
       <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M8.70711 1.39644C8.31659 1.00592 7.68342 1.00592 7.2929 1.39644L2.21968 6.46966L1.68935 6.99999L2.75001 8.06065L3.28034 7.53032L7.25001 3.56065V14.25V15H8.75001V14.25V3.56065L12.7197 7.53032L13.25 8.06065L14.3107 6.99999L13.7803 6.46966L8.70711 1.39644Z"
         fill="currentColor"
+        stroke="currentColor"
+        strokeWidth=".8"
+        strokeLinejoin="round"
+        d="M8.53033 2.27145
+       C8.23744 1.97855 7.76257 1.97855 7.46968 2.27145
+       L3.43307 6.30806
+       L2.99112 6.75
+       L3.87501 7.63388
+       L4.31695 7.19194
+       L7.37501 4.13388
+       V13.375
+       V14
+       H8.62500
+       V13.375
+       V4.13388
+       L11.68305 7.19194
+       L12.12500 7.63388
+       L13.00890 6.75
+       L12.56695 6.30806
+       L8.53033 2.27145
+       Z"
       />
     </svg>
   );
