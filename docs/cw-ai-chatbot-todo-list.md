@@ -20,6 +20,7 @@ What's coming: SAML
 * Create dev sandbox backend resources (S3/RDS)
 
 ## Misc todos:
+* small code blocks are being rendered as full-width and force a line wrap
 * Add function to remember last model used with each prior chat history (maybe extend DB scheme?)
 * Add a copy URL to clipboard function and/or mailto link when selecting for "public" (if neither than a toast message to copy and share URL and user must be CW employee signed in to app)
 * [done, but confirming] Fix code artifact prompt that thinks it can only code in python
@@ -77,6 +78,7 @@ Fixed:
 		pnpm build
 		echo "Prebuild hook completed."
 		
+Edit package.json
 
 
 pnpm add @aws-sdk/client-s3
