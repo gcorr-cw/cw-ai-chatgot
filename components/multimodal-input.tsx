@@ -43,7 +43,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Code, EllipsisVertical, FileText, Image, MenuIcon, Table } from 'lucide-react';
 import equal from 'fast-deep-equal';
 
-function PureMultimodalInput({
+export function PureMultimodalInput({
   chatId,
   input,
   setInput,
@@ -87,32 +87,27 @@ function PureMultimodalInput({
   selectedModel: any;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { width } = useWindowSize();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionRef>(null);
+  const { width } = useWindowSize();
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      adjustHeight();
-    }
-  }, []);
-
+  // Function to adjust textarea height based on content
   const adjustHeight = () => {
     if (textareaRef.current) {
+      // Reset height first to get accurate scrollHeight
       textareaRef.current.style.height = 'auto';
-
-      // Calculate the new height based on content
+      
+      // Calculate and set the new height
       const newHeight = Math.min(textareaRef.current.scrollHeight + 2, 300);
       textareaRef.current.style.height = `${newHeight}px`;
-
-      // Enable scrolling if content exceeds max height
-      if (textareaRef.current.scrollHeight > 300) {
-        textareaRef.current.style.overflowY = 'auto';
-      } else {
-        textareaRef.current.style.overflowY = 'hidden';
-      }
+      
+      // Set overflow based on content height
+      textareaRef.current.style.overflowY = 
+        textareaRef.current.scrollHeight > 300 ? 'auto' : 'hidden';
     }
   };
 
+  // Function to reset textarea height
   const resetHeight = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -120,6 +115,76 @@ function PureMultimodalInput({
       textareaRef.current.style.overflowY = 'hidden';
     }
   };
+
+  // Effect to adjust height when input changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      requestAnimationFrame(adjustHeight);
+    }
+  }, [input]);
+
+  // Effect to adjust height on initial render
+  useEffect(() => {
+    // Check if we have a textarea ref and input
+    if (!textareaRef.current || !input) return;
+
+    // Function to properly adjust the height
+    const forceHeightAdjustment = () => {
+      if (textareaRef.current) {
+        // First set a minimal height
+        textareaRef.current.style.height = '24px';
+        
+        // Force browser to recalculate layout
+        void textareaRef.current.offsetHeight;
+        
+        // Now set height based on content
+        const scrollHeight = textareaRef.current.scrollHeight;
+        const newHeight = Math.min(scrollHeight + 2, 300);
+        textareaRef.current.style.height = `${newHeight}px`;
+        
+        // Set overflow based on content height
+        textareaRef.current.style.overflowY = 
+          scrollHeight > 300 ? 'auto' : 'hidden';
+      }
+    };
+
+    // Try multiple times with different techniques
+    
+    // 1. Immediate call
+    forceHeightAdjustment();
+    
+    // 2. After a short delay (microtask)
+    Promise.resolve().then(forceHeightAdjustment);
+    
+    // 3. In the next animation frame
+    requestAnimationFrame(forceHeightAdjustment);
+    
+    // 4. After short timeouts with increasing delays
+    const timers = [
+      setTimeout(forceHeightAdjustment, 0),
+      setTimeout(forceHeightAdjustment, 100),
+      setTimeout(forceHeightAdjustment, 300)
+    ];
+    
+    // 5. When the window is fully loaded
+    const handleLoad = () => {
+      forceHeightAdjustment();
+      // Try one more time after a short delay
+      setTimeout(forceHeightAdjustment, 100);
+    };
+    
+    if (document.readyState === 'complete') {
+      handleLoad();
+    } else {
+      window.addEventListener('load', handleLoad);
+    }
+    
+    // Cleanup
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+      window.removeEventListener('load', handleLoad);
+    };
+  }, []); // Empty dependency array = run once on mount
 
   const [localStorageInput, setLocalStorageInput] = useLocalStorage(
     'input',
@@ -132,7 +197,6 @@ function PureMultimodalInput({
       // Prefer DOM value over localStorage to handle hydration
       const finalValue = domValue || localStorageInput || '';
       setInput(finalValue);
-      adjustHeight();
     }
     // Only run once after hydration
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,17 +206,6 @@ function PureMultimodalInput({
     setLocalStorageInput(input);
   }, [input, setLocalStorageInput]);
 
-  const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(event.target.value);
-    adjustHeight();
-    // Stop speech recognition if it's active when the user types
-    if (speechRecognitionRef.current?.isRecording()) {
-      console.log('Stopping speech recognition due to manual text input');
-      speechRecognitionRef.current.stopRecording();
-    }
-  };
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
   const submitForm = useCallback(() => {
@@ -169,7 +222,6 @@ function PureMultimodalInput({
     });
 
     setAttachments([]);
-    setLocalStorageInput('');
     resetHeight();
 
     if (width && width > 768) {
@@ -179,7 +231,6 @@ function PureMultimodalInput({
     attachments,
     handleSubmit,
     setAttachments,
-    setLocalStorageInput,
     width,
     chatId,
   ]);
@@ -342,6 +393,38 @@ ${supportedCategoriesList}`}
     }
   };
 
+  const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(event.target.value);
+    
+    // Force a layout update to ensure proper height calculation
+    requestAnimationFrame(adjustHeight);
+    
+    // Auto-scroll only when typing at the bottom
+    if (textareaRef.current && textareaRef.current.scrollHeight > 300) {
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          // Get cursor position
+          const cursorPosition = textareaRef.current.selectionStart;
+          const value = textareaRef.current.value;
+          
+          // Calculate how close to the end the cursor is
+          const distanceFromEnd = value.length - cursorPosition;
+          
+          // Only auto-scroll if cursor is near the end (within ~2 lines of text)
+          if (distanceFromEnd < 150) {
+            textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+          }
+        }
+      });
+    }
+    // Stop speech recognition if it's active when the user types
+    if (speechRecognitionRef.current?.isRecording()) {
+      console.log('Stopping speech recognition due to manual text input');
+      speechRecognitionRef.current.stopRecording();
+    }
+  };
+
   return (
     <div className="relative w-full flex flex-col gap-4">
       {messages.length === 0 &&
@@ -436,7 +519,7 @@ ${supportedCategoriesList}`}
                   setTimeout(() => {
                     if (textareaRef.current) {
                       // Ensure the height adjusts properly
-                      adjustHeight();
+                      requestAnimationFrame(adjustHeight);
 
                       // Force focus on the textarea to ensure proper layout
                       textareaRef.current.focus();
@@ -556,7 +639,7 @@ ${supportedCategoriesList}`}
   },
 );
 
-function PureAttachmentsButton({
+function AttachmentsButton({
   fileInputRef,
   isLoading,
 }: {
@@ -580,9 +663,9 @@ function PureAttachmentsButton({
   );
 }
 
-const AttachmentsButton = memo(PureAttachmentsButton);
+const AttachmentsButtonMemo = memo(AttachmentsButton);
 
-function PureStopButton({
+function StopButton({
   stop,
   setMessages,
 }: {
@@ -606,9 +689,9 @@ function PureStopButton({
   );
 }
 
-const StopButton = memo(PureStopButton);
+const StopButtonMemo = memo(StopButton);
 
-function PureSendButton({
+function SendButton({
   submitForm,
   input,
   uploadQueue,
@@ -634,7 +717,7 @@ function PureSendButton({
   );
 }
 
-const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
+const SendButtonMemo = memo(SendButton, (prevProps, nextProps) => {
   if (prevProps.uploadQueue.length !== nextProps.uploadQueue.length)
     return false;
   if (prevProps.input !== nextProps.input) return false;

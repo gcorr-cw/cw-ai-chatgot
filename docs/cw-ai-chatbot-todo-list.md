@@ -23,6 +23,7 @@ What's coming: SAML
 * Block use of models if chat has unsupported attachment types, or customize the toast error; block use of file uploads of types not supported by models
 
 ## Misc todos:
+* Fix outlines around buttons that appear on occasion, the user-nav, model selector when text is entered into the input box. And fix the generate menu, if you open it and then click outside of it, it will close and create an outline around it and not let you type until you click into the input box a second time. 
 * small code blocks are being rendered as full-width and force a line wrap
 		```
 		Console Error
