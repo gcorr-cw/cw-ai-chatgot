@@ -13,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
-import { memo } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import equal from 'fast-deep-equal';
 
 export function PureMessageActions({
@@ -29,11 +29,41 @@ export function PureMessageActions({
 }) {
   const { mutate } = useSWRConfig();
   const [_, copyToClipboard] = useCopyToClipboard();
+  // Store the message content in a ref to ensure we have the complete content
+  const messageContentRef = useRef<string>('');
+
+  // Update the ref whenever the message content changes
+  useEffect(() => {
+    if (message.content) {
+      messageContentRef.current = String(message.content);
+    }
+  }, [message.content]);
 
   if (isLoading) return null;
   if (message.role === 'user') return null;
   if (message.toolInvocations && message.toolInvocations.length > 0)
     return null;
+
+  // Function to handle the copy operation
+  const handleCopy = async () => {
+    try {
+      // Use the stored ref value to ensure we have the complete content
+      const textToCopy = messageContentRef.current;
+
+      // Use the native clipboard API directly as a fallback
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        // Use the hook as a backup
+        await copyToClipboard(textToCopy);
+      }
+
+      toast.success('Copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy text:', error);
+      toast.error('Failed to copy text');
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -43,12 +73,7 @@ export function PureMessageActions({
             <Button
               className="py-1 px-2 h-fit text-muted-foreground"
               variant="outline"
-              onClick={async () => {
-                // Create a new string from the message content to ensure we get the complete text
-                const textToCopy = String(message.content || '');
-                await copyToClipboard(textToCopy);
-                toast.success('Copied to clipboard!');
-              }}
+              onClick={handleCopy}
             >
               <CopyIcon />
             </Button>
@@ -66,6 +91,7 @@ export const MessageActions = memo(
   (prevProps, nextProps) => {
     if (!equal(prevProps.vote, nextProps.vote)) return false;
     if (prevProps.isLoading !== nextProps.isLoading) return false;
+    if (prevProps.message.content !== nextProps.message.content) return false;
 
     return true;
   },
