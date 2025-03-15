@@ -44,7 +44,9 @@ export function PureMessageActions({
               className="py-1 px-2 h-fit text-muted-foreground"
               variant="outline"
               onClick={async () => {
-                await copyToClipboard(message.content as string);
+                // Create a new string from the message content to ensure we get the complete text
+                const textToCopy = String(message.content || '');
+                await copyToClipboard(textToCopy);
                 toast.success('Copied to clipboard!');
               }}
             >
