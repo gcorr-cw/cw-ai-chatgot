@@ -27,6 +27,11 @@ import { isProductionEnvironment } from '@/lib/constants'
 import { NextResponse } from 'next/server'
 import { myProvider } from '@/lib/ai/providers'
 import { ExtendedAttachment } from '@/lib/types/attachment'
+import { 
+  isImageType, 
+  isTextBasedFile, 
+  ATTACHMENT_TYPES 
+} from '@/lib/attachments/types'
 
 export const maxDuration = 60
 
@@ -154,16 +159,16 @@ export async function POST(request: Request) {
             }))
           )
 
-          // Check if we're using Claude model
+          // Check whether the chat exists and if not, create it
           const isClaudeModel = selectedChatModel === 'claude-sonnet';
 
           const imageAttachments = message.experimental_attachments.filter(
-            (attachment) => attachment.contentType?.startsWith('image/')
+            (attachment) => isImageType(attachment.contentType)
           )
 
           // Identify PDF attachments for special handling with Claude
           const pdfAttachments = message.experimental_attachments.filter(
-            (attachment) => attachment.contentType === 'application/pdf'
+            (attachment) => attachment.contentType === ATTACHMENT_TYPES.DOCUMENT_PDF.PDF
           )
 
           // Identify text-based attachments
@@ -171,34 +176,13 @@ export async function POST(request: Request) {
             (attachment) => {
               const contentType = attachment.contentType?.toLowerCase() || ''
               const fileName = attachment.name?.toLowerCase() || ''
-              const fileExtension = fileName.split('.').pop() || ''
-
+              
               // Skip PDFs when using Claude as they'll be handled specially
-              if (isClaudeModel && contentType === 'application/pdf') {
+              if (isClaudeModel && contentType === ATTACHMENT_TYPES.DOCUMENT_PDF.PDF) {
                 return false;
               }
-
-              const isTextByMimeType =
-                contentType.startsWith('text/') ||
-                contentType.includes('markdown') ||
-                contentType.includes('/md') ||
-                contentType === 'application/rtf'
-
-              const isTextByExtension =
-                contentType === 'application/octet-stream' &&
-                [
-                  'md',
-                  'markdown',
-                  'txt',
-                  'csv',
-                  'json',
-                  'html',
-                  'htm',
-                  'rtf',
-                  'log',
-                ].includes(fileExtension)
-
-              return isTextByMimeType || isTextByExtension
+              
+              return isTextBasedFile(contentType, fileName);
             }
           )
           
@@ -208,8 +192,8 @@ export async function POST(request: Request) {
               const contentType = attachment.contentType?.toLowerCase() || ''
               const fileName = attachment.name?.toLowerCase() || ''
               const fileExtension = fileName.split('.').pop() || ''
-              const isImageFile = contentType.startsWith('image/')
-              const isPdfFile = contentType === 'application/pdf'
+              const isImageFile = isImageType(contentType)
+              const isPdfFile = contentType === ATTACHMENT_TYPES.DOCUMENT_PDF.PDF
               const isTextByMimeType =
                 contentType.startsWith('text/') ||
                 contentType.includes('markdown') ||

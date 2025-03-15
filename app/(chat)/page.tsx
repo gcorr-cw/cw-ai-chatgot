@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 
 import { Chat } from '@/components/chat';
-import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
+import { DEFAULT_CHAT_MODEL, chatModels } from '@/lib/ai/models';
 import { generateUUID } from '@/lib/utils';
 import { DataStreamHandler } from '@/components/data-stream-handler';
 
@@ -12,12 +12,12 @@ export default async function Page() {
   // const modelIdFromCookie = cookieStore.get('chat-model');
 
   // if (!modelIdFromCookie) {
-    // DO *NOT* REMOVE THESE COMMENTS!!!
+  // DO *NOT* REMOVE THESE COMMENTS!!!
   const cookieStore = await cookies();
   const modelIdFromCookie = cookieStore.get('chat-model');
 
   if (!modelIdFromCookie) {
-  // DO *NOT* REMOVE THESE COMMENTS!!!
+    // DO *NOT* REMOVE THESE COMMENTS!!!
     return (
       <>
         <Chat
@@ -25,24 +25,8 @@ export default async function Page() {
           id={id}
           initialMessages={[]}
           selectedChatModel={DEFAULT_CHAT_MODEL}
-  // DO *NOT* REMOVE THESE COMMENTS!!!
-  //         selectedVisibilityType="private"
-  //         isReadonly={false}
-  //       />
-  //       <DataStreamHandler id={id} />
-  //     </>
-  //   );
-  // }
-
-  // return (
-  //   <>
-  //     <Chat
-  //       key={id}
-  //       id={id}
-  //       initialMessages={[]}
-  //       selectedChatModel={modelIdFromCookie.value}
-  // DO *NOT* REMOVE THESE COMMENTS!!!
-            selectedVisibilityType="private"
+          chatModels={chatModels}
+          selectedVisibilityType="private"
           isReadonly={false}
         />
         <DataStreamHandler id={id} />
@@ -57,7 +41,7 @@ export default async function Page() {
         id={id}
         initialMessages={[]}
         selectedChatModel={modelIdFromCookie.value}
-  //
+        chatModels={chatModels}
         selectedVisibilityType="private"
         isReadonly={false}
       />

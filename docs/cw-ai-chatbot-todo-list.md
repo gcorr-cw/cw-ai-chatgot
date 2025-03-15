@@ -24,9 +24,35 @@ What's coming: SAML
 
 ## Misc todos:
 * small code blocks are being rendered as full-width and force a line wrap
+		```
+		Console Error
+
+
+		In HTML, <div> cannot be a descendant of <p>.
+		This will cause a hydration error.
+
+		See more info here: https://nextjs.org/docs/messages/react-hydration-error
+
+
+		...
+			<PurePreviewMessage index={1} chatId="0e2332da-f..." message={{id:"8077f9...", ...}} isLoading={false} ...>
+			<AnimatePresence>
+				<PresenceChild isPresent={true} initial={undefined} custom={undefined} presenceAffectsLayout={true} mode="sync" ...>
+				<MotionComponent data-testid="message-as..." className="w-full mx-..." initial={{y:5,opacity:0}} ...>
+					<div data-testid="message-as..." className="w-full mx-..." data-role="assistant" style={{opacity:0, ...}} ...>
+					<div className="flex gap-4...">
+						<div className="flex flex-...">
+						<div className="flex flex-...">
+							<div className="flex flex-...">
+							<NonMemoizedMarkdown>
+								<Markdown remarkPlugins={[...]} components={{...}}>
+		>                         <p>
+									<CodeBlock node={{type:"element", ...}}>
+		>                             <div className="not-prose flex flex-col relative group">
+		```
 * Add function to remember last model used with each prior chat history (maybe extend DB scheme?)
 * Add a copy URL to clipboard function and/or mailto link when selecting for "public" (if neither than a toast message to copy and share URL and user must be CW employee signed in to app)
-* [done, but confirming] Fix code artifact prompt that thinks it can only code in python
+* Fix code artifact prompt that thinks it can only code in python
 * Auto scroll users submission to top of page on subsequent submission
 * Allow the chat messages area to grow a little wider if the window is wide.
 * Add paste to markdown page in app (and maybe a markdown editor)

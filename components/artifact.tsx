@@ -71,6 +71,7 @@ function PureArtifact({
   votes,
   isReadonly,
   selectedModelId,
+  chatModels,
 }: {
   chatId: string;
   input: string;
@@ -97,6 +98,7 @@ function PureArtifact({
   ) => Promise<string | null | undefined>;
   isReadonly: boolean;
   selectedModelId: string;
+  chatModels: any[];
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
@@ -347,10 +349,12 @@ function PureArtifact({
                     attachments={attachments}
                     setAttachments={setAttachments}
                     messages={messages}
-                    append={append}
-                    className="bg-background dark:bg-muted"
                     setMessages={setMessages}
+                    append={append}
+                    className="pb-4 md:pb-6"
                     selectedModelId={selectedModelId}
+                    chatModels={chatModels}
+                    selectedModel={chatModels && chatModels.length > 0 ? chatModels.find(model => model.id === selectedModelId) || chatModels[0] : undefined}
                   />
                 </form>
               </div>
@@ -377,7 +381,7 @@ function PureArtifact({
                     width: artifact.boundingBox.width,
                     borderRadius: 50,
                   }
-            }
+              }
             animate={
               isMobile
                 ? {

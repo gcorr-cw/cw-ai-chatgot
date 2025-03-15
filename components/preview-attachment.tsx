@@ -2,64 +2,63 @@ import { useState } from 'react';
 import type { Attachment } from 'ai';
 import {
   FileIcon,
-  ImageIcon,
   CodeIcon,
+  ImageIcon,
   LoaderIcon,
   TrashIcon,
 } from './icons';
-import { FileText } from 'lucide-react';
+import { FileText, FileCode2, Sheet } from 'lucide-react';
 import { ExtendedAttachment } from '@/lib/types/attachment';
+import {
+  isImageType,
+  isDocumentType,
+  isTextType,
+  isPresentationType,
+  isSpreadsheetType,
+  isCodeType
+} from '@/lib/attachments/types';
 
 function getFileIcon(contentType: string | undefined) {
   if (!contentType) return <FileIcon size={20} />;
 
-  if (contentType.startsWith('image/')) return <ImageIcon size={20} />;
+  if (isImageType(contentType)) {
+    return <ImageIcon size={30} />;
+  }
 
-  // PDF and doc
-  if (
-    contentType === 'application/pdf' ||
-    contentType === 'application/msword' ||
-    contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ) {
-    return <FileIcon size={20} />;
+  // PDF - special red icon
+  if (contentType === 'application/pdf') {
+    return <FileText size={30} color="#e11d48" />;
+  }
+  // Other document types
+  else if (isDocumentType(contentType)) {
+    return <FileIcon size={30} />;
   }
 
   // Text
-  if (
-    contentType === 'text/plain' ||
-    contentType === 'text/markdown' ||
-    contentType === 'text/richtext' ||
-    contentType === 'application/rtf' ||
-    contentType.includes('markdown') ||
-    contentType.includes('/md')
-  ) {
+  if (isTextType(contentType)) {
     return <FileText size={30} />;
   }
 
-  // CSV or spreadsheet
-  if (
-    contentType === 'application/vnd.ms-excel' ||
-    contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-    contentType === 'text/csv'
-  ) {
-    return <FileIcon size={20} />;
+  // CSV - special green icon
+  if (contentType === 'text/csv') {
+    return <Sheet size={30} color="#22c55e" />;
+  }
+  // Other spreadsheet types
+  else if (isSpreadsheetType(contentType)) {
+    return <Sheet size={30} color="#22c55e" />;
   }
 
   // PowerPoint
-  if (
-    contentType === 'application/vnd.ms-powerpoint' ||
-    contentType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-  ) {
-    return <FileIcon size={20} />;
+  if (isPresentationType(contentType)) {
+    return <FileIcon size={30} />;
   }
 
-  // HTML / XML / JSON
-  if (contentType === 'text/html' || contentType === 'application/xml' || contentType === 'application/json') {
-    return <CodeIcon size={20} />;
+  // Code
+  if (isCodeType(contentType)) {
+    return <FileCode2 size={30} />;
   }
 
-  // Default
-  return <FileIcon size={20} />;
+  return <FileIcon size={30} />;
 }
 
 function getFileName(attachment: ExtendedAttachment) {

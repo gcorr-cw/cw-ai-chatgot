@@ -22,7 +22,14 @@ import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 
 import { sanitizeUIMessages } from '@/lib/utils';
-import { isAttachmentTypeSupported, getSupportedAttachmentTypesFormatted } from '@/lib/ai/models';
+import { isAttachmentTypeSupported, getSupportedAttachmentTypesFormatted, getSupportedFileExtensions } from '@/lib/ai/models';
+import {
+  getFileTypeCategory,
+  getSupportedFileTypeCategories
+} from '@/lib/attachments/types';
+
+// 10MB file size limit
+const FILE_SIZE_LIMIT = 10 * 1024 * 1024;
 
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
@@ -45,23 +52,27 @@ function PureMultimodalInput({
   messages,
   setMessages,
   append,
+  reload,
   handleSubmit,
   className,
   selectedModelId,
+  chatModels,
+  selectedModel,
 }: {
   chatId: string;
   input: string;
   setInput: (value: string) => void;
   isLoading: boolean;
   stop: () => void;
-  attachments: Array<Attachment>;
-  setAttachments: Dispatch<SetStateAction<Array<Attachment>>>;
+  attachments: Attachment[];
+  setAttachments: Dispatch<SetStateAction<Attachment[]>>;
   messages: Array<Message>;
   setMessages: Dispatch<SetStateAction<Array<Message>>>;
   append: (
     message: Message | CreateMessage,
     chatRequestOptions?: ChatRequestOptions,
   ) => Promise<string | null | undefined>;
+  reload?: () => void;
   handleSubmit: (
     event?: {
       preventDefault?: () => void;
@@ -70,6 +81,8 @@ function PureMultimodalInput({
   ) => void;
   className?: string;
   selectedModelId: string;
+  chatModels: any;
+  selectedModel: any;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -195,61 +208,127 @@ function PureMultimodalInput({
     }
   };
 
-  const handleFileChange = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files || []);
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = event.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-      // Validate file types against selected model
-      const unsupportedFiles = files.filter(
-        file => !isAttachmentTypeSupported(selectedModelId, file.type)
+    const files = Array.from(fileList);
+    
+    // Validate file size
+    const oversizedFiles = files.filter((file) => file.size > FILE_SIZE_LIMIT);
+    if (oversizedFiles.length > 0) {
+      toast.error(
+        `File size exceeds the ${FILE_SIZE_LIMIT / (1024 * 1024)}MB limit: ${oversizedFiles
+          .map((file) => file.name)
+          .join(', ')}`,
+      );
+      
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      return;
+    }
+
+    // Get the current model information - always fetch fresh to ensure we have the latest
+    const currentModelId = selectedModelId;
+    const currentModel = chatModels && chatModels.length > 0 ? 
+      chatModels.find((model: any) => model.id === currentModelId) : null;
+    const currentModelName = currentModel?.name || 'the selected model';
+    
+    // Get the supported MIME types and extensions for the current model
+    const supportedMimeTypes = currentModel?.supportedAttachmentTypes || [];
+    const supportedExtensions = getSupportedFileExtensions(currentModelId);
+    
+    // Check if any files are unsupported
+    const unsupportedFiles = files.filter(file => {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+      
+      // First check by extension (more reliable for markdown files)
+      if (supportedExtensions.includes(fileExtension)) {
+        return false; // File is supported
+      }
+      
+      // Then fall back to MIME type check
+      return !isAttachmentTypeSupported(currentModelId, file.type);
+    });
+
+    if (unsupportedFiles.length > 0) {
+      // Collect categories of unsupported files
+      const unsupportedCategories = new Set<string>();
+      unsupportedFiles.forEach(file => {
+        const category = getFileTypeCategory(file.type, file.name);
+        if (category !== 'Unknown' && category !== 'Other') {
+          unsupportedCategories.add(category);
+        }
+      });
+
+      // Get supported categories for the selected model
+      const supportedCategories = getSupportedFileTypeCategories(supportedMimeTypes);
+
+      // Format the list of supported categories as a bulleted list
+      const supportedCategoriesList = supportedCategories
+        .map(category => `- ${category}`)
+        .join('\n');
+
+      // Format the unsupported categories with bold
+      const unsupportedCategoriesBold = Array.from(unsupportedCategories)
+        .map(category => `**${category}**`)
+        .join(', ');
+
+      toast.error(
+        (
+          <div className="whitespace-pre-line">
+            {`${unsupportedCategoriesBold} file types are not supported by ${currentModelName}.
+
+Supported types:
+${supportedCategoriesList}`}
+          </div>
+        ),
+        {
+          duration: 5000,
+        }
+      );
+    }
+
+    // Filter out unsupported files
+    const supportedFiles = files.filter(file => {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+
+      // First check by extension (more reliable for markdown files)
+      if (supportedExtensions.includes(fileExtension)) {
+        return true; // File is supported
+      }
+
+      // Then fall back to MIME type check
+      return isAttachmentTypeSupported(currentModelId, file.type);
+    });
+
+    if (supportedFiles.length === 0) {
+      return;
+    }
+
+    // Continue with supported files only
+    setUploadQueue(supportedFiles.map((file) => file.name));
+
+    try {
+      const uploadPromises = supportedFiles.map((file) => uploadFile(file));
+      const uploadedAttachments = await Promise.all(uploadPromises);
+      const successfullyUploadedAttachments = uploadedAttachments.filter(
+        (attachment) => attachment !== undefined
       );
 
-      if (unsupportedFiles.length > 0) {
-        const fileNames = unsupportedFiles.map(file => file.name).join(', ');
-        const supportedTypes = getSupportedAttachmentTypesFormatted(selectedModelId);
-        toast.error(
-          `${fileNames} ${unsupportedFiles.length === 1 ? 'is' : 'are'} not supported by the selected model. Supported types: ${supportedTypes}`
-        );
-
-        // Clear the file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-
-        // Filter out unsupported files
-        const supportedFiles = files.filter(
-          file => isAttachmentTypeSupported(selectedModelId, file.type)
-        );
-
-        if (supportedFiles.length === 0) {
-          return;
-        }
-
-        // Continue with supported files only
-        setUploadQueue(supportedFiles.map((file) => file.name));
-      } else {
-        setUploadQueue(files.map((file) => file.name));
-      }
-
-      try {
-        const uploadPromises = files.map((file) => uploadFile(file));
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined
-        );
-
-        setAttachments((currentAttachments) => [
-          ...currentAttachments,
-          ...successfullyUploadedAttachments,
-        ]);
-      } catch (error) {
-        console.error('Error uploading files!', error);
-      } finally {
-        setUploadQueue([]);
-      }
-    },
-    [setAttachments, selectedModelId],
-  );
+      setAttachments((currentAttachments) => [
+        ...currentAttachments,
+        ...successfullyUploadedAttachments,
+      ]);
+    } catch (error) {
+      console.error('Error uploading files!', error);
+    } finally {
+      setUploadQueue([]);
+    }
+  };
 
   return (
     <div className="relative w-full flex flex-col gap-4">
@@ -414,8 +493,35 @@ export const MultimodalInput = memo(
 
       if (incompatibleAttachments.length > 0) {
         const supportedTypes = getSupportedAttachmentTypesFormatted(nextProps.selectedModelId);
+
+        // Get the model name
+        const modelName = nextProps.selectedModel?.name ||
+          (nextProps.chatModels && nextProps.chatModels.length > 0 ?
+            nextProps.chatModels.find((model: any) => model.id === nextProps.selectedModelId)?.name : null) ||
+          'the selected model';
+
+        // Get supported categories for the selected model
+        const supportedMimeTypes = (nextProps.chatModels && nextProps.chatModels.length > 0 ?
+          nextProps.chatModels.find((model: any) => model.id === nextProps.selectedModelId)?.supportedAttachmentTypes : null) || [];
+        const supportedCategories = getSupportedFileTypeCategories(supportedMimeTypes);
+
+        // Format the list of supported categories as a bulleted list
+        const supportedCategoriesList = supportedCategories
+          .map(category => `- ${category}`)
+          .join('\n');
+
         toast.error(
-          `Some attachments are not supported by ${nextProps.selectedModelId}. Supported types: ${supportedTypes}`
+          (
+            <div className="whitespace-pre-line">
+              {`Some attachments are not supported by ${modelName}.
+
+Supported types:
+${supportedCategoriesList}`}
+            </div>
+          ),
+          {
+            duration: 10000,
+          }
         );
 
         // Remove incompatible attachments

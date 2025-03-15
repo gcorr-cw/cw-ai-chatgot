@@ -3,63 +3,56 @@ import { z } from 'zod';
 
 import { auth } from '@/app/(auth)/auth';
 import { uploadToS3 } from '@/lib/s3-service';
+import { 
+  ALL_SUPPORTED_MIME_TYPES, 
+  FILE_EXTENSIONS, 
+  FILE_SIZE_LIMIT 
+} from '@/lib/attachments/types';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
   file: z
     .instanceof(Blob)
-    .refine((file) => file.size <= 5 * 1024 * 1024, {
-      message: 'File size should be less than 5MB',
+    .refine((file) => file.size <= FILE_SIZE_LIMIT, {
+      message: `File size should be less than ${FILE_SIZE_LIMIT / (1024 * 1024)}MB`,
     })
     .refine((file) => {
       const fileType = file.type.toLowerCase();
       const fileName = file instanceof File ? file.name.toLowerCase() : '';
       const fileExtension = fileName.split('.').pop() || '';
 
-      const textExtensions = ['txt', 'md', 'markdown', 'csv', 'json', 'html', 'htm', 'rtf', 'log'];
-      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-      const docExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+      // Get all supported extensions from our centralized file
+      const textExtensions = Object.keys(FILE_EXTENSIONS).filter(ext => 
+        FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS].startsWith('text/') ||
+        FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS] === 'application/json' ||
+        FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS] === 'application/rtf'
+      );
+      
+      const imageExtensions = Object.keys(FILE_EXTENSIONS).filter(ext => 
+        FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS].startsWith('image/')
+      );
+      
+      const docExtensions = Object.keys(FILE_EXTENSIONS).filter(ext => 
+        FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS].startsWith('application/') &&
+        !FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS].startsWith('application/vnd.ms-excel') &&
+        !FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS].startsWith('application/vnd.openxmlformats-officedocument.spreadsheet') &&
+        !FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS].startsWith('application/vnd.ms-powerpoint') &&
+        !FILE_EXTENSIONS[ext as keyof typeof FILE_EXTENSIONS].startsWith('application/vnd.openxmlformats-officedocument.presentation')
+      );
 
-      // Check against allowed MIME types
-      const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'text/plain',
-        'text/markdown',
-        'text/x-markdown',
-        'text/md',
-        'application/markdown',
-        'application/x-markdown',
-        'text/csv',
-        'text/html',
-        'text/richtext',
-        'application/rtf',
-        'application/json',
-      ];
+      // Check against allowed MIME types from our centralized file
+      const allowedTypes = ALL_SUPPORTED_MIME_TYPES;
 
       const hasValidExtension =
         textExtensions.includes(fileExtension) ||
         imageExtensions.includes(fileExtension) ||
         docExtensions.includes(fileExtension);
 
-      const hasValidMimeType =
-        allowedTypes.includes(fileType) ||
-        fileType.includes('markdown') ||
-        fileType.includes('/md') ||
-        fileType.startsWith('text/');
+      const hasValidMimeType = allowedTypes.includes(fileType);
 
-      return hasValidExtension || hasValidMimeType || fileType === 'application/octet-stream';
+      return hasValidMimeType || hasValidExtension;
     }, {
-      message: 'Unsupported file type. Allowed types include images, PDFs, Office documents, and text files.',
+      message: 'Unsupported file type',
     }),
 });
 
@@ -93,7 +86,7 @@ export async function POST(request: Request) {
       const fileName = file.name.toLowerCase();
       if (
         (fileName.endsWith('.md') || fileName.endsWith('.markdown')) &&
-        (!file.type || file.type === 'application/octet-stream')
+        (!file.type || file.type === 'application/octet-stream' || file.type === '')
       ) {
         // Create a new File with the correct MIME type
         fileToValidate = new File([await file.arrayBuffer()], file.name, {
