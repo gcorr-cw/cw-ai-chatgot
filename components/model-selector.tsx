@@ -1,6 +1,8 @@
 'use client';
 
-import { startTransition, useMemo, useOptimistic, useState } from 'react';
+import { startTransition, useMemo, useOptimistic, useState, useEffect } from 'react';
+import { useChat } from 'ai/react';
+import { toast } from 'sonner';
 
 import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { chatModels } from '@/lib/ai/models';
+import { chatModels, isAttachmentTypeSupported, getSupportedAttachmentTypesFormatted } from '@/lib/ai/models';
 import { cn } from '@/lib/utils';
 
 import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
@@ -24,11 +26,55 @@ export function ModelSelector({
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
+  const { messages } = useChat();
 
   const selectedChatModel = useMemo(
     () => chatModels.find((chatModel) => chatModel.id === optimisticModelId),
     [optimisticModelId],
   );
+
+  // Function to check for incompatible attachments when model changes
+  const checkIncompatibleAttachments = (newModelId: string) => {
+    if (!messages || messages.length === 0) return true;
+    
+    // Find all messages with attachments
+    const messagesWithAttachments = messages.filter(
+      message => message.experimental_attachments && message.experimental_attachments.length > 0
+    );
+    
+    if (messagesWithAttachments.length === 0) return true;
+    
+    // Check if any attachments are incompatible with the selected model
+    let incompatibleAttachmentsFound = false;
+    let incompatibleTypes = new Set<string>();
+    
+    messagesWithAttachments.forEach(message => {
+      if (message.experimental_attachments) {
+        message.experimental_attachments.forEach(attachment => {
+          const contentType = attachment.contentType || '';
+          if (!isAttachmentTypeSupported(newModelId, contentType)) {
+            incompatibleAttachmentsFound = true;
+            incompatibleTypes.add(contentType);
+          }
+        });
+      }
+    });
+    
+    // Show warning if incompatible attachments found
+    if (incompatibleAttachmentsFound) {
+      const supportedTypes = getSupportedAttachmentTypesFormatted(newModelId);
+      const modelName = chatModels.find(model => model.id === newModelId)?.name || newModelId;
+      
+      toast.warning(
+        `This chat contains attachments that are not supported by ${modelName}. Some content may not be properly processed. Supported types: ${supportedTypes}`,
+        {
+          duration: 6000,
+        }
+      );
+    }
+    
+    return true;
+  };
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -55,6 +101,11 @@ export function ModelSelector({
                 setOpen(false);
 
                 startTransition(() => {
+                  // Check for incompatible attachments before changing the model
+                  if (id !== optimisticModelId) {
+                    checkIncompatibleAttachments(id);
+                  }
+                  
                   setOptimisticModelId(id);
                   saveChatModelAsCookie(id);
                 });

@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 
 import { sanitizeUIMessages } from '@/lib/utils';
+import { isAttachmentTypeSupported, getSupportedAttachmentTypesFormatted } from '@/lib/ai/models';
 
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
@@ -46,6 +47,7 @@ function PureMultimodalInput({
   append,
   handleSubmit,
   className,
+  selectedModelId,
 }: {
   chatId: string;
   input: string;
@@ -67,6 +69,7 @@ function PureMultimodalInput({
     chatRequestOptions?: ChatRequestOptions,
   ) => void;
   className?: string;
+  selectedModelId: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -196,13 +199,43 @@ function PureMultimodalInput({
     async (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
 
-      setUploadQueue(files.map((file) => file.name));
+      // Validate file types against selected model
+      const unsupportedFiles = files.filter(
+        file => !isAttachmentTypeSupported(selectedModelId, file.type)
+      );
+
+      if (unsupportedFiles.length > 0) {
+        const fileNames = unsupportedFiles.map(file => file.name).join(', ');
+        const supportedTypes = getSupportedAttachmentTypesFormatted(selectedModelId);
+        toast.error(
+          `${fileNames} ${unsupportedFiles.length === 1 ? 'is' : 'are'} not supported by the selected model. Supported types: ${supportedTypes}`
+        );
+
+        // Clear the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+
+        // Filter out unsupported files
+        const supportedFiles = files.filter(
+          file => isAttachmentTypeSupported(selectedModelId, file.type)
+        );
+
+        if (supportedFiles.length === 0) {
+          return;
+        }
+
+        // Continue with supported files only
+        setUploadQueue(supportedFiles.map((file) => file.name));
+      } else {
+        setUploadQueue(files.map((file) => file.name));
+      }
 
       try {
         const uploadPromises = files.map((file) => uploadFile(file));
         const uploadedAttachments = await Promise.all(uploadPromises);
         const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined,
+          (attachment) => attachment !== undefined
         );
 
         setAttachments((currentAttachments) => [
@@ -215,7 +248,7 @@ function PureMultimodalInput({
         setUploadQueue([]);
       }
     },
-    [setAttachments],
+    [setAttachments, selectedModelId],
   );
 
   return (
@@ -373,10 +406,30 @@ function PureMultimodalInput({
 export const MultimodalInput = memo(
   PureMultimodalInput,
   (prevProps, nextProps) => {
+    // Check if model changed and there are incompatible attachments
+    if (prevProps.selectedModelId !== nextProps.selectedModelId && nextProps.attachments.length > 0) {
+      const incompatibleAttachments = nextProps.attachments.filter(
+        attachment => !isAttachmentTypeSupported(nextProps.selectedModelId, attachment.contentType || '')
+      );
+
+      if (incompatibleAttachments.length > 0) {
+        const supportedTypes = getSupportedAttachmentTypesFormatted(nextProps.selectedModelId);
+        toast.error(
+          `Some attachments are not supported by ${nextProps.selectedModelId}. Supported types: ${supportedTypes}`
+        );
+
+        // Remove incompatible attachments
+        nextProps.setAttachments(
+          nextProps.attachments.filter(
+            attachment => isAttachmentTypeSupported(nextProps.selectedModelId, attachment.contentType || '')
+          )
+        );
+      }
+    }
+
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.isLoading !== nextProps.isLoading) return false;
-    if (!equal(prevProps.attachments, nextProps.attachments)) return false;
-
+    if (prevProps.attachments.length !== nextProps.attachments.length) return false;
     return true;
   },
 );

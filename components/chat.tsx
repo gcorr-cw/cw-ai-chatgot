@@ -97,6 +97,7 @@ export function Chat({
               messages={messages}
               setMessages={setMessages}
               append={append}
+              selectedModelId={selectedChatModel}
             />
           )}
         </form>
@@ -117,6 +118,7 @@ export function Chat({
         reload={reload}
         votes={votes}
         isReadonly={isReadonly}
+        selectedModelId={selectedChatModel}
       />
     </>
   );

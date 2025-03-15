@@ -25,49 +25,56 @@ function PureChatHeader({
   isReadonly: boolean;
 }) {
   const router = useRouter();
-  const { open } = useSidebar();
-
+  const { open, setOpen } = useSidebar();
   const { width: windowWidth } = useWindowSize();
 
   return (
     <header className="flex sticky top-0 bg-background py-1.5 items-center px-2 md:px-2 gap-2">
       <SidebarToggle />
 
-      {(!open || windowWidth < 768) && (
-        <Tooltip>
-          <TooltipTrigger asChild>
+      <div className="flex-1 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <ModelSelector selectedModelId={selectedModelId} />
+          {!isReadonly && (
+            <VisibilitySelector
+              selectedVisibilityType={selectedVisibilityType}
+              chatId={chatId}
+            />
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                data-testid="new-chat"
+                variant="outline"
+                size="icon"
+                className="md:h-[34px] md:w-[34px]"
+                onClick={() => {
+                  router.push('/');
+                }}
+              >
+                <PlusIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>New chat</TooltipContent>
+          </Tooltip>
+
+          {windowWidth && windowWidth < 768 && (
             <Button
               variant="outline"
-              className="order-1 md:order-1 md:px-2 px-2 md:h-fit"
+              size="icon"
+              className="md:h-[34px] md:w-[34px]"
               onClick={() => {
-                router.push('/');
-                router.refresh();
+                setOpen(true);
               }}
             >
-              <PlusIcon />
-              <span className="md:sr-only">New Chat</span>
+              <VercelIcon />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>New Chat</TooltipContent>
-        </Tooltip>
-      )}
-
-      {!isReadonly && (
-        <ModelSelector
-          selectedModelId={selectedModelId}
-          className="order-2 md:order-2"
-        />
-      )}
-
-      {!isReadonly && (
-        <VisibilitySelector
-          chatId={chatId}
-          selectedVisibilityType={selectedVisibilityType}
-          className="order-3 md:order-3"
-        />
-      )}
-
-
+          )}
+        </div>
+      </div>
     </header>
   );
 }
