@@ -22,6 +22,11 @@ const CodeBlockWrapper = (props: any) => {
   );
 };
 
+// Custom horizontal rule component with bottom margin
+const HorizontalRule = () => {
+  return <hr className="my-6" />;
+};
+
 const NonMemoizedMarkdown = ({ children }: { children: string }) => {
   return (
     <div className="markdown-content">
@@ -38,7 +43,8 @@ const NonMemoizedMarkdown = ({ children }: { children: string }) => {
               {children}
             </Link>
           ),
-          code: CodeBlockWrapper
+          code: CodeBlockWrapper,
+          hr: HorizontalRule
         }}
       >
         {children}
