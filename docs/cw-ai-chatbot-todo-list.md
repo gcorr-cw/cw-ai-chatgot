@@ -3,7 +3,7 @@ ai-chatbot-3-Todos
 
 # What new for staff?
 
-Modern features - canvas, attachments, image creation, reasoning models, sensitive information, ability to scoll up during ai responses
+AUP - Modern features - canvas, attachments, image creation, reasoning models, sensitive information, ability to scoll up during ai responses
 
 What's coming: SAML
 
@@ -18,6 +18,9 @@ What's coming: SAML
 * Communcation RE senstive info and only authorized beta testers
 * Where to house beta/production site
 * Create dev sandbox backend resources (S3/RDS)
+* Fix resume scroll down icon so it doesn't overlap the input box when the input box grows due to long text input 
+* Block Word, Excel, Powerpint, etc.
+* Block use of models if chat has unsupported attachment types, or customize the toast error; block use of file uploads of types not supported by models
 
 ## Misc todos:
 * small code blocks are being rendered as full-width and force a line wrap
@@ -31,6 +34,17 @@ What's coming: SAML
 * The document artifact doesn't work great when the user requests modifications to specific section of the generated content, it frequently will only generate that section instead of the full document. - Compare behavior with ChatGPT. It seem that the system instructions for this feature need to be updated.
 * Fix mic text output line wrap below attach and mic icons
 * Add delete all chats option at the bottom of the sidebar? i don't think so, chatgpt doesn't have that feature.
+* Add download image icon in the image artifact
+* 
+## CW-chatgptv2 feeedback 
+
+From Matt 3-13:
+* Make sidebar open by default for new users
+* Copy AI assitant message function is broken, it only copies the first word
+* Input box has no scroll bar
+* Improve nodel selection drop down names and descriptions - simplify for staff, but allow full model names for advanced users (maybe an advanced toggle to expand the models and names?)
+
+
 
 
 ## Long term
@@ -38,7 +52,6 @@ What's coming: SAML
 
 
 ## Completed enhancements:
-
 * Enable file attachments (images and text for 4o and PDFs for Sonnet)
 * Moved avatar menu and moved username into the menu
 * Improved app styling to look more like ChatGPT
