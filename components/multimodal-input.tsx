@@ -40,7 +40,7 @@ import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import SpeechRecognitionButton, { SpeechRecognitionRef } from './speech-recognition-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Code, EllipsisVertical, FileText, Image, MenuIcon, Table } from 'lucide-react';
+import { Code, CornerDownLeft, EllipsisVertical, FileText, Image, MenuIcon, Table, WrapText } from 'lucide-react';
 import equal from 'fast-deep-equal';
 
 export function PureMultimodalInput({
@@ -528,6 +528,42 @@ ${supportedCategoriesList}`}
                 }}
                 isLoading={isLoading}
               />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+                disabled={isLoading}
+                aria-disabled={isLoading}
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent form submission
+                  if (textareaRef.current) {
+                    const textarea = textareaRef.current;
+                    
+                    // Force focus on the textarea to ensure we can get/set selection
+                    textarea.focus();
+                    
+                    // Get current cursor position after ensuring focus
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    
+                    // Insert a new line at cursor position
+                    const newValue = input.substring(0, start) + '\n' + input.substring(end);
+                    setInput(newValue);
+                    
+                    // Set cursor position after the inserted new line
+                    // Use setTimeout to ensure the DOM updates before setting selection
+                    setTimeout(() => {
+                      textarea.selectionStart = start + 1;
+                      textarea.selectionEnd = start + 1;
+                      // Adjust height after inserting new line
+                      adjustHeight();
+                    }, 0);
+                  }
+                }}
+                title="Insert new line (Hint: Press Shift+Enter)"
+              >
+                <WrapText size={18} />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
