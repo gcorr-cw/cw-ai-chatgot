@@ -26,7 +26,7 @@ export function CodeBlock({
 
   if (!inline) {
     return (
-      <div className="not-prose flex flex-col relative group">
+      <div className="not-prose flex flex-col relative group mb-6">
         <button
           onClick={handleCopy}
           className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700"
