@@ -23,34 +23,10 @@ What's coming: SAML
 * Block use of models if chat has unsupported attachment types, or customize the toast error; block use of file uploads of types not supported by models
 
 ## Misc todos:
+* Add drag drop file upload functionality
+* Add paste image to input box functionality
+* Several elements of Markdown formatting in the document artifact are broken   
 * Fix outlines around buttons that appear on occasion, the user-nav, model selector when text is entered into the input box. And fix the generate menu, if you open it and then click outside of it, it will close and create an outline around it and not let you type until you click into the input box a second time. 
-* small code blocks are being rendered as full-width and force a line wrap
-		```
-		Console Error
-
-
-		In HTML, <div> cannot be a descendant of <p>.
-		This will cause a hydration error.
-
-		See more info here: https://nextjs.org/docs/messages/react-hydration-error
-
-
-		...
-			<PurePreviewMessage index={1} chatId="0e2332da-f..." message={{id:"8077f9...", ...}} isLoading={false} ...>
-			<AnimatePresence>
-				<PresenceChild isPresent={true} initial={undefined} custom={undefined} presenceAffectsLayout={true} mode="sync" ...>
-				<MotionComponent data-testid="message-as..." className="w-full mx-..." initial={{y:5,opacity:0}} ...>
-					<div data-testid="message-as..." className="w-full mx-..." data-role="assistant" style={{opacity:0, ...}} ...>
-					<div className="flex gap-4...">
-						<div className="flex flex-...">
-						<div className="flex flex-...">
-							<div className="flex flex-...">
-							<NonMemoizedMarkdown>
-								<Markdown remarkPlugins={[...]} components={{...}}>
-		>                         <p>
-									<CodeBlock node={{type:"element", ...}}>
-		>                             <div className="not-prose flex flex-col relative group">
-		```
 * Add function to remember last model used with each prior chat history (maybe extend DB scheme?)
 * Add a copy URL to clipboard function and/or mailto link when selecting for "public" (if neither than a toast message to copy and share URL and user must be CW employee signed in to app)
 * Fix code artifact prompt that thinks it can only code in python
@@ -93,6 +69,7 @@ From Matt 3-13:
 * Hid voting buttons
 * Display full chat title on hover (tool tip)
 * Change "public" to "shared" (require any user auth)
+* small code blocks are being rendered as full-width and force a line wrap and generating numerous browser errors
 
 Fixed:
 

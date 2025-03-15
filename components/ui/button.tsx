@@ -18,7 +18,7 @@ const buttonVariants = cva(
           'bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:pointer-events-none',
         ghost: 'hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:pointer-events-none',
         link: 'text-primary underline-offset-4 hover:underline disabled:opacity-50 disabled:pointer-events-none',
-        sendButton: 'bg-black text-gray-200 border border-zinc-600 hover:bg-zinc-800 dark:bg-gray-100 dark:text-gray-800 dark:border-gray-300 dark:hover:bg-gray-200 [&_svg]:size-5',
+        sendButton: 'bg-black text-gray-200 border border-zinc-600 dark:bg-gray-100 dark:text-gray-800 dark:border-gray-300 [&_svg]:size-5 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none enabled:hover:bg-zinc-700 enabled:hover:text-white dark:enabled:hover:bg-zinc-300 dark:enabled:hover:text-gray-900',
       },
       size: {
         default: 'h-10 px-4 py-2',
