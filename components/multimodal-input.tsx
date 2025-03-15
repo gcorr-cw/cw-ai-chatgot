@@ -99,7 +99,17 @@ function PureMultimodalInput({
   const adjustHeight = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight + 2}px`;
+
+      // Calculate the new height based on content
+      const newHeight = Math.min(textareaRef.current.scrollHeight + 2, 300);
+      textareaRef.current.style.height = `${newHeight}px`;
+
+      // Enable scrolling if content exceeds max height
+      if (textareaRef.current.scrollHeight > 300) {
+        textareaRef.current.style.overflowY = 'auto';
+      } else {
+        textareaRef.current.style.overflowY = 'hidden';
+      }
     }
   };
 
@@ -107,6 +117,7 @@ function PureMultimodalInput({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = '98px';
+      textareaRef.current.style.overflowY = 'hidden';
     }
   };
 
@@ -214,7 +225,7 @@ function PureMultimodalInput({
     if (!fileList || fileList.length === 0) return;
 
     const files = Array.from(fileList);
-    
+
     // Validate file size
     const oversizedFiles = files.filter((file) => file.size > FILE_SIZE_LIMIT);
     if (oversizedFiles.length > 0) {
@@ -223,34 +234,34 @@ function PureMultimodalInput({
           .map((file) => file.name)
           .join(', ')}`,
       );
-      
+
       // Clear the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
+
       return;
     }
 
     // Get the current model information - always fetch fresh to ensure we have the latest
     const currentModelId = selectedModelId;
-    const currentModel = chatModels && chatModels.length > 0 ? 
+    const currentModel = chatModels && chatModels.length > 0 ?
       chatModels.find((model: any) => model.id === currentModelId) : null;
     const currentModelName = currentModel?.name || 'the selected model';
-    
+
     // Get the supported MIME types and extensions for the current model
     const supportedMimeTypes = currentModel?.supportedAttachmentTypes || [];
     const supportedExtensions = getSupportedFileExtensions(currentModelId);
-    
+
     // Check if any files are unsupported
     const unsupportedFiles = files.filter(file => {
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-      
+
       // First check by extension (more reliable for markdown files)
       if (supportedExtensions.includes(fileExtension)) {
         return false; // File is supported
       }
-      
+
       // Then fall back to MIME type check
       return !isAttachmentTypeSupported(currentModelId, file.type);
     });
@@ -382,7 +393,7 @@ ${supportedCategoriesList}`}
       )}
 
       <div className="relative">
-        <div className="min-h-[24px] max-h-[calc(75dvh)] overflow-hidden rounded-2xl bg-muted dark:border-zinc-700">
+        <div className="relative min-h-[24px] max-h-[344px] overflow-hidden rounded-2xl bg-muted dark:border-zinc-700">
           <Textarea
             data-testid="multimodal-input"
             ref={textareaRef}
@@ -390,10 +401,10 @@ ${supportedCategoriesList}`}
             value={input}
             onChange={handleInput}
             className={cx(
-              'min-h-[24px] max-h-[calc(75dvh-44px)] overflow-hidden resize-none rounded-2xl !text-base bg-muted border-none dark:border-zinc-700',
+              'min-h-[24px] max-h-[300px] overflow-y-auto resize-none rounded-t-2xl !text-base bg-muted border-none dark:border-zinc-700',
               className,
             )}
-            style={{ paddingBottom: '44px' }} /* Fixed padding to ensure text doesn't overlap with icons */
+            style={{ marginBottom: '44px' }}
             rows={2}
             autoFocus
             onKeyDown={(event) => {
@@ -412,7 +423,6 @@ ${supportedCategoriesList}`}
               }
             }}
           />
-
           <div className="absolute bottom-0 left-0 right-0 p-2 flex flex-row justify-between bg-muted rounded-b-2xl">
             <div className="flex flex-row">
               <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading} />
