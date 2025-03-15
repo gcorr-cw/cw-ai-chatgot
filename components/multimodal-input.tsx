@@ -476,7 +476,9 @@ ${supportedCategoriesList}`}
       )}
 
       <div className="relative">
-        <div className="relative min-h-[24px] max-h-[344px] overflow-hidden rounded-2xl bg-muted dark:border-zinc-700">
+        <div 
+          className="relative min-h-[24px] max-h-[344px] overflow-hidden rounded-2xl bg-muted dark:border-zinc-700"
+        >
           <Textarea
             data-testid="multimodal-input"
             ref={textareaRef}
@@ -572,11 +574,25 @@ ${supportedCategoriesList}`}
                     className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
                     disabled={isLoading}
                     aria-disabled={isLoading}
+                    onClick={(e) => {
+                      // Stop propagation to prevent other click handlers
+                      e.stopPropagation();
+                    }}
                   >
                     <EllipsisVertical size={18} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
+                <DropdownMenuContent 
+                  align="start"
+                  onCloseAutoFocus={(e) => {
+                    // Prevent the default autofocus behavior
+                    e.preventDefault();
+                    // Focus the textarea
+                    if (textareaRef.current) {
+                      textareaRef.current.focus();
+                    }
+                  }}
+                >
                   <div className="px-2 py-1.5 text-sm font-semibold">Generate:</div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
