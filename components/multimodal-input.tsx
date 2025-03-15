@@ -28,6 +28,8 @@ import {
   getSupportedFileTypeCategories
 } from '@/lib/attachments/types';
 
+import { ExtendedAttachment } from '@/lib/types/attachment';
+
 // 10MB file size limit
 const FILE_SIZE_LIMIT = 10 * 1024 * 1024;
 
@@ -64,8 +66,8 @@ function PureMultimodalInput({
   setInput: (value: string) => void;
   isLoading: boolean;
   stop: () => void;
-  attachments: Attachment[];
-  setAttachments: Dispatch<SetStateAction<Attachment[]>>;
+  attachments: ExtendedAttachment[];
+  setAttachments: Dispatch<SetStateAction<ExtendedAttachment[]>>;
   messages: Array<Message>;
   setMessages: Dispatch<SetStateAction<Array<Message>>>;
   append: (
@@ -190,13 +192,12 @@ function PureMultimodalInput({
         });
 
         // Extract all relevant fields from the response, including objectName and name
-        const { url, pathname, contentType, objectName, name } = data;
+        const { url, contentType, objectName, name } = data;
 
         return {
           url,
-          pathname, // Keep pathname for backward compatibility
           objectName, // Include the unique S3 object key
-          name: name || pathname, // Use original filename if available, fall back to pathname
+          name: name || objectName, // Use original filename if available, fall back to objectName
           contentType,
         };
       }
@@ -352,131 +353,136 @@ ${supportedCategoriesList}`}
       />
 
       {(attachments.length > 0 || uploadQueue.length > 0) && (
-        <div
-          data-testid="attachments-preview"
-          className="flex flex-row gap-2 overflow-x-scroll items-end"
-        >
+        <div data-testid="attachments-preview" className="flex flex-wrap gap-2">
+          {uploadQueue.map((filename) => (
+            <div
+              key={filename}
+              className="flex items-center gap-2 rounded-md bg-muted px-2 py-1"
+            >
+              <div className="text-xs text-muted-foreground">
+                Uploading {filename}...
+              </div>
+            </div>
+          ))}
           {attachments.map((attachment) => (
             <PreviewAttachment
               key={attachment.url}
               attachment={attachment}
-              onDelete={() => {
-                setAttachments((currentAttachments) =>
-                  currentAttachments.filter((item) => item.url !== attachment.url)
+              onRemove={() => {
+                setAttachments(
+                  attachments.filter(
+                    (a) =>
+                      a.url !== attachment.url,
+                  ),
                 );
               }}
-            />
-          ))}
-
-          {uploadQueue.map((filename) => (
-            <PreviewAttachment
-              key={filename}
-              attachment={{
-                url: '',
-                name: filename,
-                contentType: '',
-              }}
-              isUploading={true}
             />
           ))}
         </div>
       )}
 
-      <Textarea
-        data-testid="multimodal-input"
-        ref={textareaRef}
-        placeholder="Send a message..."
-        value={input}
-        onChange={handleInput}
-        className={cx(
-          'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
-          className,
-        )}
-        rows={2}
-        autoFocus
-        onKeyDown={(event) => {
-          if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            !event.nativeEvent.isComposing
-          ) {
-            event.preventDefault();
+      <div className="relative">
+        <div className="min-h-[24px] max-h-[calc(75dvh)] overflow-hidden rounded-2xl bg-muted dark:border-zinc-700">
+          <Textarea
+            data-testid="multimodal-input"
+            ref={textareaRef}
+            placeholder="Send a message..."
+            value={input}
+            onChange={handleInput}
+            className={cx(
+              'min-h-[24px] max-h-[calc(75dvh-44px)] overflow-hidden resize-none rounded-2xl !text-base bg-muted border-none dark:border-zinc-700',
+              className,
+            )}
+            style={{ paddingBottom: '44px' }} /* Fixed padding to ensure text doesn't overlap with icons */
+            rows={2}
+            autoFocus
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
 
-            if (isLoading) {
-              toast.error('Please wait for the model to finish its response!');
-            } else {
-              submitForm();
-            }
-          }
-        }}
-      />
-
-      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
-        <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading} />
-        <SpeechRecognitionButton
-          ref={speechRecognitionRef}
-          onTranscript={(text) => {
-            // Update the input value with the new transcript
-            setInput(input + (input ? ' ' : '') + text);
-
-            // Force a layout update by using setTimeout
-            setTimeout(() => {
-              if (textareaRef.current) {
-                // Ensure the height adjusts properly
-                adjustHeight();
-
-                // Force focus on the textarea to ensure proper layout
-                textareaRef.current.focus();
+                if (isLoading) {
+                  toast.error('Please wait for the model to finish its response!');
+                } else {
+                  submitForm();
+                }
               }
-            }, 0);
-          }}
-          isLoading={isLoading}
-        />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
-              disabled={isLoading}
-              aria-disabled={isLoading}
-            >
-              <EllipsisVertical size={18} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <div className="px-2 py-1.5 text-sm font-semibold">Generate:</div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Code className="mr-2 h-4 w-4" />
-              Code
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Image className="mr-2 h-4 w-4" />
-              Images
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Table className="mr-2 h-4 w-4" />
-              Sheets
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <FileText className="mr-2 h-4 w-4" />
-              Docs
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
-        {isLoading ? (
-          <StopButton stop={stop} setMessages={setMessages} />
-        ) : (
-          <SendButton
-            input={input}
-            submitForm={submitForm}
-            uploadQueue={uploadQueue}
+            }}
           />
-        )}
+
+          <div className="absolute bottom-0 left-0 right-0 p-2 flex flex-row justify-between bg-muted rounded-b-2xl">
+            <div className="flex flex-row">
+              <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading} />
+              <SpeechRecognitionButton
+                ref={speechRecognitionRef}
+                onTranscript={(text) => {
+                  // Update the input value with the new transcript
+                  setInput(input + (input ? ' ' : '') + text);
+
+                  // Force a layout update by using setTimeout
+                  setTimeout(() => {
+                    if (textareaRef.current) {
+                      // Ensure the height adjusts properly
+                      adjustHeight();
+
+                      // Force focus on the textarea to ensure proper layout
+                      textareaRef.current.focus();
+                    }
+                  }, 0);
+                }}
+                isLoading={isLoading}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+                    disabled={isLoading}
+                    aria-disabled={isLoading}
+                  >
+                    <EllipsisVertical size={18} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <div className="px-2 py-1.5 text-sm font-semibold">Generate:</div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <Code className="mr-2 h-4 w-4" />
+                    Code
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Image className="mr-2 h-4 w-4" />
+                    Images
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Table className="mr-2 h-4 w-4" />
+                    Sheets
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Docs
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="flex flex-row">
+              {isLoading ? (
+                <StopButton stop={stop} setMessages={setMessages} />
+              ) : (
+                <SendButton
+                  input={input}
+                  submitForm={submitForm}
+                  uploadQueue={uploadQueue}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

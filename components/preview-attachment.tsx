@@ -71,11 +71,11 @@ function getFileName(attachment: ExtendedAttachment) {
 export const PreviewAttachment = ({
   attachment,
   isUploading = false,
-  onDelete,
+  onRemove,
 }: {
   attachment: ExtendedAttachment;
   isUploading?: boolean;
-  onDelete?: () => void;
+  onRemove?: () => void;
 }) => {
   const { name, url: initialUrl, contentType, objectName } = attachment;
   const [url, setUrl] = useState(initialUrl);
@@ -151,12 +151,12 @@ export const PreviewAttachment = ({
         )}
 
         {/* Delete button on hover */}
-        {isHovering && onDelete && !isUploading && (
+        {isHovering && onRemove && !isUploading && (
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onDelete();
+              onRemove();
             }}
             className="absolute top-0.5 right-0.5 bg-zinc-800/70 hover:bg-zinc-900/90 text-white rounded-full p-0.5 size-5 flex items-center justify-center z-10 transition-all"
             aria-label="Delete attachment"
