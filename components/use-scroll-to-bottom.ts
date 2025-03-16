@@ -226,6 +226,14 @@ export function useScrollToBottom<T extends HTMLElement>(): [
     
     log('SETUP', 'Setting up scroll event listener');
     
+    // Track scroll state
+    const scrollState = {
+      lastDirection: null as 'up' | 'down' | null,
+      previousScrollTop: container.scrollTop,
+      directionChangeTime: 0,
+      userInitiatedScroll: false
+    };
+    
     const handleScroll = () => {
       // Skip if this is our own programmatic scrolling
       if (programmaticScrolling.current) {
@@ -240,8 +248,42 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       
       const { scrollTop, scrollHeight, clientHeight } = container;
       
-      // Case 1: User scrolled up (any amount) - disable auto-scroll for current response
-      if (scrollTop > 5) {
+      // On first user scroll after page load, mark as user-initiated
+      if (!scrollState.userInitiatedScroll) {
+        scrollState.userInitiatedScroll = true;
+        log('SCROLL', '🖱️ First user-initiated scroll detected');
+        
+        // If user is scrolling up initially, immediately disable auto-scroll
+        if (scrollTop < scrollState.previousScrollTop) {
+          log('SCROLL', '👆 Initial scroll is upward - disabling auto-scroll');
+          disableAutoScrollForCurrentResponse();
+          // Update state and exit early
+          scrollState.previousScrollTop = scrollTop;
+          return;
+        }
+      }
+      
+      // Determine scroll direction
+      const currentDirection = scrollTop < scrollState.previousScrollTop ? 'up' : 'down';
+      
+      // If direction changed, record the time
+      if (scrollState.lastDirection !== currentDirection) {
+        scrollState.lastDirection = currentDirection;
+        scrollState.directionChangeTime = now;
+        log('SCROLL', `Direction changed to ${currentDirection}`);
+      }
+      
+      // Update previous scroll position for next comparison
+      scrollState.previousScrollTop = scrollTop;
+      
+      // Don't change auto-scroll state immediately after direction change (prevent stuttering)
+      // Give a 300ms buffer after direction change
+      if (now - scrollState.directionChangeTime < 300) {
+        return;
+      }
+      
+      // Case 1: User scrolled up - disable auto-scroll for current response
+      if (scrollTop > 5 && currentDirection === 'up') {
         const scrollBuffer = 30; // Allow some wiggle room for determining if at bottom
         const isAtBottom = Math.abs((scrollTop + clientHeight) - scrollHeight) < scrollBuffer;
         
@@ -405,7 +447,9 @@ export function useScrollToBottom<T extends HTMLElement>(): [
         // Check if container has any meaningful content to scroll
         if (container.scrollHeight > window.innerHeight) {
           initialScrollComplete = true;
-          scrollToBottom(true);
+          // Don't force auto-scroll on initial load to prevent stuttering
+          // when user tries to scroll up immediately after page load
+          container.scrollTop = container.scrollHeight;
         } else {
           log('INIT', '⚠️ Container not ready for scroll yet, will retry');
         }
@@ -430,7 +474,7 @@ export function useScrollToBottom<T extends HTMLElement>(): [
     };
     
     // Multiple attempts with increasing delays
-    const scrollAttempts = [100, 500, 1000, 2000];
+    const scrollAttempts = [100, 500];
     const scrollTimers: number[] = [];
     
     scrollAttempts.forEach(delay => {

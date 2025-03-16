@@ -49,17 +49,14 @@ function PureMessages({
     if (messages.length > 0) {
       //console.log('[MESSAGES] Initial load with messages, forcing scroll to bottom');
       
-      // Use multiple attempts for reliability
-      const scrollTimes = [50, 200, 500, 1000];
-      scrollTimes.forEach(time => {
-        setTimeout(() => {
-          if (messagesContainerRef.current) {
-            // Force scroll to the very bottom of the container directly
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-            forceEnableAutoScroll(); // Also reset the auto-scroll state
-          }
-        }, time);
-      });
+      // Disable auto-scroll initially to prevent stuttering when user tries to scroll up
+      const initialScrollDelay = 100;
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          // Force scroll to the very bottom of the container directly
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, initialScrollDelay);
     }
   }, []);  // Empty dependency array = only run once on mount
 
@@ -81,7 +78,7 @@ function PureMessages({
         messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
       }
     }
-  }, [messages.length]); // Only run when the number of messages changes
+  }, [messages.length, forceEnableAutoScroll]); // Only run when the number of messages changes
 
   // Update the messages container position when it changes
   useEffect(() => {
