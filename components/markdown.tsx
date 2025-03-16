@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import { CodeBlock } from './code-block';
+import type { Components } from 'react-markdown';
 
 // Create a wrapper for CodeBlock that matches ReactMarkdown's expected interface
 const CodeBlockWrapper = (props: any) => {
@@ -28,27 +29,30 @@ const HorizontalRule = () => {
 };
 
 const NonMemoizedMarkdown = ({ children }: { children: string }) => {
-  return (
-    <div className="markdown-content">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          a: ({ node, href, children, ...props }) => (
-            <Link
-              href={href || '#'}
-              target="_blank"
-              rel="noreferrer"
-              {...props}
-            >
-              {children}
-            </Link>
-          ),
-          code: CodeBlockWrapper,
-          hr: HorizontalRule
-        }}
+  // Define the components object with proper typing
+  const components: Components = {
+    a: ({ node, href, children, ...props }) => (
+      <Link
+        href={href || '#'}
+        target="_blank"
+        rel="noreferrer"
+        {...props}
       >
         {children}
-      </ReactMarkdown>
+      </Link>
+    ),
+    code: CodeBlockWrapper,
+    hr: HorizontalRule
+  };
+
+  // Use a dynamic import approach to avoid TypeScript JSX compatibility issues
+  const MarkdownComponent = ReactMarkdown as any;
+
+  return (
+    <div className="markdown-content">
+      <MarkdownComponent remarkPlugins={[remarkGfm]} components={components}>
+        {children}
+      </MarkdownComponent>
     </div>
   );
 };

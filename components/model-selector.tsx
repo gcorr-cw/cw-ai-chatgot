@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useMemo, useOptimistic, useState, useEffect } from 'react';
+import { startTransition, useMemo, useState, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import { toast } from 'sonner';
 
@@ -24,14 +24,18 @@ export function ModelSelector({
   selectedModelId: string;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
-  const [optimisticModelId, setOptimisticModelId] =
-    useOptimistic(selectedModelId);
+  const [currentModelId, setCurrentModelId] = useState(selectedModelId);
   const { messages } = useChat();
 
   const selectedChatModel = useMemo(
-    () => chatModels.find((chatModel) => chatModel.id === optimisticModelId),
-    [optimisticModelId],
+    () => chatModels.find((chatModel) => chatModel.id === currentModelId),
+    [currentModelId],
   );
+
+  // Update currentModelId when selectedModelId changes (from props)
+  useEffect(() => {
+    setCurrentModelId(selectedModelId);
+  }, [selectedModelId]);
 
   // Function to check for incompatible attachments when model changes
   const checkIncompatibleAttachments = (newModelId: string) => {
@@ -102,16 +106,16 @@ export function ModelSelector({
 
                 startTransition(() => {
                   // Check for incompatible attachments before changing the model
-                  if (id !== optimisticModelId) {
+                  if (id !== currentModelId) {
                     checkIncompatibleAttachments(id);
                   }
                   
-                  setOptimisticModelId(id);
+                  setCurrentModelId(id);
                   saveChatModelAsCookie(id);
                 });
               }}
               className="gap-4 group/item flex flex-row justify-between items-center"
-              data-active={id === optimisticModelId}
+              data-active={id === currentModelId}
             >
               <div className="flex flex-col gap-1 items-start">
                 <div>{chatModel.name}</div>
