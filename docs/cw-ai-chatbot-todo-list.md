@@ -10,7 +10,10 @@ What's coming: SAML
 
 # Todos:
 
+!! Fix narrow view right side overflow
+!! Hide Claude from all users except a key group of users 
 !! Document key procedures for EB deploy before I forget
+
 
 ## Beta punch list
 * Implement email OTP and Forgot password
@@ -22,6 +25,8 @@ What's coming: SAML
 * Block Word, Excel, Powerpint, etc.
 * Block use of models if chat has unsupported attachment types, or customize the toast error; block use of file uploads of types not supported by models
 * Fix issues with attachment uploads failing if the first attempt failed or got blocked
+* Fix chat history menu icon outline after clicking on it
+* Reset model to default on new chat or when selecting an existing chat if o3mini is selected
 
 ## Misc todos:
 * Clear model selector attachment toast error as if a supported model is selected before the toast timeout expires
@@ -85,7 +90,7 @@ Fixed:
 ### Critical pre-build scripts that override EB's default NPM commands, one is for deployments (code updates) and the other is redeployments (EB config changes, scaling, etc.)
 * .platform\confighooks\prebuild\01_pnpm.sh
 * .platform\hooks\prebuild\01_pnpm.sh
-
+		
 		exec > /tmp/01_pnpm.log 2>&1
 		set -x
 		echo "Starting prebuild hook: Installing pnpm globally..."
@@ -97,9 +102,12 @@ Fixed:
 		echo "Building the app with pnpm build..."
 		pnpm build
 		echo "Prebuild hook completed."
-		
-Edit package.json
 
+!! IMPORTANT step: Use Git Bash console to make prebuild hook scripts executable: `chmod +x .platform/confighooks/prebuild/01_pnpm.sh` and `chmod +x .platform/hooks/prebuild/01_pnpm.sh` 
+
+Edit `package.json`; under scripts add: `"start": "next start -p 8080 -H 0.0.0.0"`,
+
+Create `Procfile` in root directory with: `web: pnpm start`
 
 pnpm add @aws-sdk/client-s3
 pnpm add @aws-sdk/s3-request-presigner
