@@ -12,8 +12,8 @@ export interface ChatModel {
 export const chatModels: Array<ChatModel> = [
   {
     id: 'chat-model-small',
-    name: 'GPT 4o mini',
-    description: 'Fast, lightweight tasks',
+    name: 'Small Model',
+    description: 'Fast, lightweight tasks  (GPT 4o mini)',
     supportedAttachmentTypes: [
       ...Object.values(ATTACHMENT_TYPES.IMAGE),
       ATTACHMENT_TYPES.DOCUMENT_PDF.PDF,
@@ -24,8 +24,8 @@ export const chatModels: Array<ChatModel> = [
   },
   {
     id: 'chat-model-large',
-    name: 'GPT 4o',
-    description: 'Complex tasks & image uploads',
+    name: 'Large Model',
+    description: 'Complex multi-step tasks  (GPT 4o)',
     supportedAttachmentTypes: [
       ...Object.values(ATTACHMENT_TYPES.IMAGE),
       ATTACHMENT_TYPES.DOCUMENT_PDF.PDF,
@@ -36,8 +36,8 @@ export const chatModels: Array<ChatModel> = [
   },
   {
     id: 'chat-model-reasoning',
-    name: 'GPT o3 mini',
-    description: 'Very complex reasoning tasks',
+    name: 'Reasoning Model',
+    description: 'Very complex reasoning tasks  (GPT o3 mini)',
     supportedAttachmentTypes: [
       ...Object.values(ATTACHMENT_TYPES.TEXT),
       ...Object.values(ATTACHMENT_TYPES.CODE),

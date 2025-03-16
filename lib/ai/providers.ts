@@ -44,7 +44,12 @@ export const myProvider = isTestEnvironment
       languageModels: {
         'chat-model-small': openai('gpt-4o-mini'),
         'chat-model-large': openai('gpt-4o'),
-        'chat-model-reasoning': openai('o3-mini'),
+        'chat-model-reasoning': wrapLanguageModel({
+          model: openai('o3-mini', {
+            reasoningEffort: 'high'
+          }),
+          middleware: extractReasoningMiddleware({ tagName: 'think' })
+        }),
         'title-model': openai('gpt-4-turbo'),
         'artifact-model': openai('gpt-4o-mini'),
         'claude-sonnet': anthropic('claude-3-5-sonnet-20241022'),
