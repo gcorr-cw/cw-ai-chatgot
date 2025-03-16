@@ -13,6 +13,12 @@ import {
   titleModel,
 } from './models.test';
 
+// Define response models for PDF support
+export const responseModels = {
+  'chat-model-small': openai.responses('gpt-4o-mini'),
+  'chat-model-large': openai.responses('gpt-4o'),
+};
+
 export const myProvider = isTestEnvironment
   ? customProvider({
       languageModels: {

@@ -21,8 +21,10 @@ What's coming: SAML
 * Fix resume scroll down icon so it doesn't overlap the input box when the input box grows due to long text input 
 * Block Word, Excel, Powerpint, etc.
 * Block use of models if chat has unsupported attachment types, or customize the toast error; block use of file uploads of types not supported by models
+* Fix issues with attachment uploads failing if the first attempt failed or got blocked
 
 ## Misc todos:
+* Clear model selector attachment toast error as if a supported model is selected before the toast timeout expires
 * Add drag drop file upload functionality
 * Add paste image to input box functionality
 * Several elements of Markdown formatting in the document artifact are broken   
@@ -55,6 +57,7 @@ From Matt 3-13:
 
 
 ## Completed enhancements:
+* Enabled PDF file attachments for 4o and 4o-mini
 * Enable file attachments (images and text for 4o and PDFs for Sonnet)
 * Moved avatar menu and moved username into the menu
 * Improved app styling to look more like ChatGPT

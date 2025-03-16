@@ -16,7 +16,7 @@ export const chatModels: Array<ChatModel> = [
     description: 'Fast, lightweight tasks',
     supportedAttachmentTypes: [
       ...Object.values(ATTACHMENT_TYPES.IMAGE),
-      //ATTACHMENT_TYPES.DOCUMENT_PDF.PDF,
+      ATTACHMENT_TYPES.DOCUMENT_PDF.PDF,
       ...Object.values(ATTACHMENT_TYPES.TEXT),
       ...Object.values(ATTACHMENT_TYPES.CODE),
       ATTACHMENT_TYPES.SPREADSHEET_CSV.CSV
@@ -28,7 +28,7 @@ export const chatModels: Array<ChatModel> = [
     description: 'Complex tasks & image uploads',
     supportedAttachmentTypes: [
       ...Object.values(ATTACHMENT_TYPES.IMAGE),
-      //ATTACHMENT_TYPES.DOCUMENT_PDF.PDF,
+      ATTACHMENT_TYPES.DOCUMENT_PDF.PDF,
       ...Object.values(ATTACHMENT_TYPES.TEXT),
       ...Object.values(ATTACHMENT_TYPES.CODE),
       ATTACHMENT_TYPES.SPREADSHEET_CSV.CSV

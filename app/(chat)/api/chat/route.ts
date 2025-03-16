@@ -25,7 +25,7 @@ import { requestSuggestions } from '@/lib/ai/tools/request-suggestions'
 import { getWeather } from '@/lib/ai/tools/get-weather'
 import { isProductionEnvironment } from '@/lib/constants'
 import { NextResponse } from 'next/server'
-import { myProvider } from '@/lib/ai/providers'
+import { myProvider, responseModels } from '@/lib/ai/providers'
 import { ExtendedAttachment } from '@/lib/types/attachment'
 import { 
   isImageType, 
@@ -177,8 +177,8 @@ export async function POST(request: Request) {
               const contentType = attachment.contentType?.toLowerCase() || ''
               const fileName = attachment.name?.toLowerCase() || ''
               
-              // Skip PDFs when using Claude as they'll be handled specially
-              if (isClaudeModel && contentType === ATTACHMENT_TYPES.DOCUMENT_PDF.PDF) {
+              // Skip PDFs as they'll be handled specially
+              if (contentType === ATTACHMENT_TYPES.DOCUMENT_PDF.PDF) {
                 return false;
               }
               
@@ -273,29 +273,30 @@ export async function POST(request: Request) {
           }
 
           // For Claude model, we need to prepare a different message format with multimodal content
-          if (isClaudeModel && (imageAttachments.length > 0 || pdfAttachments.length > 0)) {
-            console.log('Preparing multimodal content for Claude model');
+          if ((isClaudeModel || selectedChatModel === 'chat-model-large' || selectedChatModel === 'chat-model-small') && 
+              (imageAttachments.length > 0 || pdfAttachments.length > 0)) {
+            console.log(`Preparing multimodal content for ${selectedChatModel} model`);
             
-            // For Claude, we'll use a special format in the message content
+            // We'll use a special format in the message content
             // We'll include a note about attachments in the text content
-            let claudeContent = typeof processedContent === 'string' 
+            let modelContent = typeof processedContent === 'string' 
               ? processedContent 
               : '';
             
             // Add notes about the attachments
             if (imageAttachments.length > 0) {
-              claudeContent += `\n\n[Note: This message includes ${imageAttachments.length} image attachment(s) that will be processed by Claude directly]`;
+              modelContent += `\n\n[Note: This message includes ${imageAttachments.length} image attachment(s) that will be processed directly]`;
             }
             
             if (pdfAttachments.length > 0) {
-              claudeContent += `\n\n[Note: This message includes ${pdfAttachments.length} PDF document(s) that will be processed by Claude directly]`;
+              modelContent += `\n\n[Note: This message includes ${pdfAttachments.length} PDF document(s) that will be processed directly]`;
             }
             
-            // We'll use the experimental_attachments field to pass the attachments to Claude
-            // The AI SDK will handle the conversion to the proper format for Claude
+            // We'll use the experimental_attachments field to pass the attachments
+            // The AI SDK will handle the conversion to the proper format
             return {
               ...message,
-              content: claudeContent,
+              content: modelContent,
               experimental_attachments: [...imageAttachments, ...pdfAttachments]
             };
           }
@@ -334,8 +335,21 @@ export async function POST(request: Request) {
 
     return createDataStreamResponse({
       execute: (dataStream) => {
+        // Check if we need to use the responses API for PDF handling
+        const hasPdfAttachments = finalMessages.some(msg => 
+          msg.experimental_attachments?.some(
+            attachment => attachment.contentType === ATTACHMENT_TYPES.DOCUMENT_PDF.PDF
+          )
+        );
+        
+        // Use the responses API for models that support PDF attachments
+        const useResponsesApi = hasPdfAttachments && 
+          (selectedChatModel === 'chat-model-large' || selectedChatModel === 'chat-model-small');
+        
         const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
+          model: useResponsesApi 
+            ? responseModels[selectedChatModel as keyof typeof responseModels] 
+            : myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel }),
           messages: finalMessages,
           maxSteps: 5,
