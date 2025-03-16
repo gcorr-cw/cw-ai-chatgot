@@ -38,10 +38,10 @@
         line-height: 1.5;
     }
 
-    .markdown-content p {
+    /* .markdown-content p {
         margin-bottom: 1em;
         display: block;
-    }
+    } */
 
     .markdown-content a {
         color: #0969da;
