@@ -19,6 +19,16 @@ export const responseModels = {
   'chat-model-large': openai.responses('gpt-4o'),
 };
 
+// Define web search tool using the exact format from the documentation
+export const webSearchTool = openai.tools.webSearchPreview({
+  searchContextSize: 'medium',
+  userLocation: {
+    type: 'approximate',
+    city: 'Albany',
+    region: 'Oregon',
+  },
+});
+
 export const myProvider = isTestEnvironment
   ? customProvider({
       languageModels: {
