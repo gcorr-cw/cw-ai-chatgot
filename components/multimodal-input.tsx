@@ -40,7 +40,7 @@ import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import SpeechRecognitionButton, { SpeechRecognitionRef } from './speech-recognition-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from './ui/dropdown-menu';
-import { Code, CornerDownLeft, EllipsisVertical, FileText, Image, MenuIcon, Table, WrapText, Check, Search } from 'lucide-react';
+import { Code, CornerDownLeft, EllipsisVertical, FileText, Image, Table, WrapText, Check, Search } from 'lucide-react';
 import equal from 'fast-deep-equal';
 
 export function PureMultimodalInput({
@@ -608,7 +608,7 @@ ${supportedCategoriesList}`}
                 }}
                 title="Insert new line (Hint: Press Shift+Enter)"
               >
-                <WrapText size={18} />
+                <CornerDownLeft size={18} />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
