@@ -21,7 +21,7 @@ import {
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 
-import { sanitizeUIMessages } from '@/lib/utils';
+import { sanitizeUIMessages, generateUUID } from '@/lib/utils';
 import { isAttachmentTypeSupported, getSupportedAttachmentTypesFormatted, getSupportedFileExtensions } from '@/lib/ai/models';
 import {
   getFileTypeCategory,
@@ -40,7 +40,7 @@ import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import SpeechRecognitionButton, { SpeechRecognitionRef } from './speech-recognition-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Code, CornerDownLeft, EllipsisVertical, FileText, Image, MenuIcon, Table, WrapText } from 'lucide-react';
+import { Code, CornerDownLeft, EllipsisVertical, FileText, Image, MenuIcon, Table, WrapText, Check } from 'lucide-react';
 import equal from 'fast-deep-equal';
 
 export function PureMultimodalInput({
@@ -207,6 +207,46 @@ export function PureMultimodalInput({
   }, [input, setLocalStorageInput]);
 
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
+  const [selectedArtifact, setSelectedArtifact] = useState<string | null>(null);
+
+  // Create a wrapper function that will include the artifact prefix in the message
+  const handleSubmitWithArtifact = useCallback(
+    (event?: { preventDefault?: () => void }, chatRequestOptions?: ChatRequestOptions) => {
+      if (selectedArtifact) {
+        // Map of artifact types to their key phrases
+        const keyPhrases: Record<string, string> = {
+          'code': '/code: ',
+          'images': '/image: Please generate an image of ',
+          'sheets': '/sheet: ',
+          'docs': '/doc: '
+        };
+
+        // Get the key phrase for the selected artifact
+        const keyPhrase = keyPhrases[selectedArtifact];
+        const originalInput = input;
+        
+        // Create a new message with the key phrase prepended
+        const userMessage: Message = {
+          id: generateUUID(),
+          role: 'user',
+          content: keyPhrase + originalInput,
+          createdAt: new Date()
+        };
+        
+        // Use append instead of handleSubmit to directly add the message with our modified content
+        append(userMessage, {
+          experimental_attachments: attachments,
+        });
+        
+        // Reset after sending
+        setSelectedArtifact(null);
+      } else {
+        // Normal submission without artifact key phrase
+        handleSubmit(event, chatRequestOptions);
+      }
+    },
+    [input, selectedArtifact, append, attachments, handleSubmit]
+  );
 
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
@@ -217,22 +257,25 @@ export function PureMultimodalInput({
       speechRecognitionRef.current.stopRecording();
     }
 
-    handleSubmit(undefined, {
+    // Use our wrapper to handle the submission
+    handleSubmitWithArtifact(undefined, {
       experimental_attachments: attachments,
     });
 
+    setInput('');
     setAttachments([]);
     resetHeight();
-
+    
     if (width && width > 768) {
       textareaRef.current?.focus();
     }
   }, [
     attachments,
-    handleSubmit,
+    handleSubmitWithArtifact,
     setAttachments,
     width,
     chatId,
+    setInput
   ]);
 
   const uploadFile = async (file: File) => {
@@ -571,7 +614,7 @@ ${supportedCategoriesList}`}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+                    className={`rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 ${selectedArtifact ? 'bg-blue-200 dark:bg-blue-600/70' : ''}`}
                     disabled={isLoading}
                     aria-disabled={isLoading}
                     onClick={(e) => {
@@ -595,24 +638,41 @@ ${supportedCategoriesList}`}
                 >
                   <div className="px-2 py-1.5 text-sm font-semibold">Generate:</div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSelectedArtifact(selectedArtifact === 'code' ? null : 'code')}
+                    className={selectedArtifact === 'code' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
+                  >
                     <Code className="mr-2 h-4 w-4" />
                     Code
+                    {selectedArtifact === 'code' && <Check className="ml-auto h-4 w-4" />}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSelectedArtifact(selectedArtifact === 'images' ? null : 'images')}
+                    className={selectedArtifact === 'images' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
+                  >
                     <Image className="mr-2 h-4 w-4" />
-                    Images
+                    Image
+                    {selectedArtifact === 'images' && <Check className="ml-auto h-4 w-4" />}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSelectedArtifact(selectedArtifact === 'sheets' ? null : 'sheets')}
+                    className={selectedArtifact === 'sheets' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
+                  >
                     <Table className="mr-2 h-4 w-4" />
-                    Sheets
+                    Spreadsheet (csv)
+                    {selectedArtifact === 'sheets' && <Check className="ml-auto h-4 w-4" />}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSelectedArtifact(selectedArtifact === 'docs' ? null : 'docs')}
+                    className={selectedArtifact === 'docs' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
+                  >
                     <FileText className="mr-2 h-4 w-4" />
-                    Docs
+                    Document
+                    {selectedArtifact === 'docs' && <Check className="ml-auto h-4 w-4" />}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
             </div>
 
             <div className="flex flex-row">
@@ -660,6 +720,11 @@ export const MultimodalInput = memo(
         const supportedCategoriesList = supportedCategories
           .map(category => `- ${category}`)
           .join('\n');
+
+        // Format the unsupported categories with bold
+        const unsupportedCategoriesBold = Array.from(incompatibleAttachments)
+          .map(attachment => `**${getFileTypeCategory(attachment.contentType || '', attachment.name)}**`)
+          .join(', ');
 
         toast.error(
           (
