@@ -39,8 +39,8 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import SpeechRecognitionButton, { SpeechRecognitionRef } from './speech-recognition-button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Code, CornerDownLeft, EllipsisVertical, FileText, Image, MenuIcon, Table, WrapText, Check } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from './ui/dropdown-menu';
+import { Code, CornerDownLeft, EllipsisVertical, FileText, Image, MenuIcon, Table, WrapText, Check, Search } from 'lucide-react';
 import equal from 'fast-deep-equal';
 
 export function PureMultimodalInput({
@@ -218,7 +218,8 @@ export function PureMultimodalInput({
           'code': '/code: ',
           'images': '/image: Please generate an image of ',
           'sheets': '/sheet: ',
-          'docs': '/doc: '
+          'docs': '/doc: ',
+          'web-search': '/search: '
         };
 
         // Get the key phrase for the selected artifact
@@ -636,16 +637,7 @@ ${supportedCategoriesList}`}
                     }
                   }}
                 >
-                  <div className="px-2 py-1.5 text-sm font-semibold">Generate:</div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setSelectedArtifact(selectedArtifact === 'code' ? null : 'code')}
-                    className={selectedArtifact === 'code' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
-                  >
-                    <Code className="mr-2 h-4 w-4" />
-                    Code
-                    {selectedArtifact === 'code' && <Check className="ml-auto h-4 w-4" />}
-                  </DropdownMenuItem>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Generate</DropdownMenuLabel>
                   <DropdownMenuItem
                     onClick={() => setSelectedArtifact(selectedArtifact === 'images' ? null : 'images')}
                     className={selectedArtifact === 'images' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
@@ -655,11 +647,19 @@ ${supportedCategoriesList}`}
                     {selectedArtifact === 'images' && <Check className="ml-auto h-4 w-4" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    onClick={() => setSelectedArtifact(selectedArtifact === 'code' ? null : 'code')}
+                    className={selectedArtifact === 'code' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
+                  >
+                    <Code className="mr-2 h-4 w-4" />
+                    Code
+                    {selectedArtifact === 'code' && <Check className="ml-auto h-4 w-4" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={() => setSelectedArtifact(selectedArtifact === 'sheets' ? null : 'sheets')}
                     className={selectedArtifact === 'sheets' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
                   >
                     <Table className="mr-2 h-4 w-4" />
-                    Spreadsheet (csv)
+                    Spreadsheet
                     {selectedArtifact === 'sheets' && <Check className="ml-auto h-4 w-4" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -669,6 +669,18 @@ ${supportedCategoriesList}`}
                     <FileText className="mr-2 h-4 w-4" />
                     Document
                     {selectedArtifact === 'docs' && <Check className="ml-auto h-4 w-4" />}
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Tools</DropdownMenuLabel>
+                  
+                  <DropdownMenuItem
+                    onClick={() => setSelectedArtifact(selectedArtifact === 'web-search' ? null : 'web-search')}
+                    className={selectedArtifact === 'web-search' ? 'bg-blue-200 dark:bg-blue-600/70' : ''}
+                  >
+                    <Search className="mr-2 h-4 w-4" />
+                    Web Search
+                    {selectedArtifact === 'web-search' && <Check className="ml-auto h-4 w-4" />}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
