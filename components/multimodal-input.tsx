@@ -16,6 +16,7 @@ import {
   type Dispatch,
   type SetStateAction,
   type ChangeEvent,
+  type DragEvent,
   memo,
 } from 'react';
 import { toast } from 'sonner';
@@ -90,6 +91,7 @@ export function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionRef>(null);
   const { width } = useWindowSize();
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Function to adjust textarea height based on content
   const adjustHeight = () => {
@@ -320,7 +322,11 @@ export function PureMultimodalInput({
     if (!fileList || fileList.length === 0) return;
 
     const files = Array.from(fileList);
+    await processFiles(files);
+  };
 
+  // Extract file processing logic to be reused by both input change and drop handlers
+  const processFiles = async (files: File[]) => {
     // Validate file size
     const oversizedFiles = files.filter((file) => file.size > FILE_SIZE_LIMIT);
     if (oversizedFiles.length > 0) {
@@ -437,6 +443,44 @@ ${supportedCategoriesList}`}
     }
   };
 
+  // Handle drag events
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingOver) setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only set to false if we're leaving the container (not entering a child element)
+    // Check if the relatedTarget (where the pointer is going) is a child of the container
+    if (e.currentTarget.contains(e.relatedTarget as Node)) {
+      return; // Don't set to false if we're just moving to a child element
+    }
+    
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    // Check if files were dropped
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      await processFiles(files);
+    }
+  };
+
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
     
@@ -519,10 +563,26 @@ ${supportedCategoriesList}`}
         </div>
       )}
 
-      <div className="relative">
+      <div 
+        className="relative"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <div 
-          className="relative min-h-[24px] max-h-[344px] overflow-hidden rounded-2xl bg-muted dark:border-zinc-700"
+          className={cx(
+            "relative min-h-[24px] max-h-[344px] overflow-hidden rounded-2xl bg-muted dark:border-zinc-700",
+            isDraggingOver && "ring-2 ring-blue-500 dark:ring-blue-400"
+          )}
         >
+          {isDraggingOver && (
+            <div className="absolute inset-0 bg-blue-100/30 dark:bg-blue-900/30 flex items-center justify-center z-10 pointer-events-none">
+              <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg px-4 py-2 text-sm font-medium">
+                Drop files to upload
+              </div>
+            </div>
+          )}
           <Textarea
             data-testid="multimodal-input"
             ref={textareaRef}
@@ -741,7 +801,7 @@ export const MultimodalInput = memo(
         toast.error(
           (
             <div className="whitespace-pre-line">
-              {`Some attachments are not supported by ${modelName}.
+              {`${unsupportedCategoriesBold} file types are not supported by ${modelName}.
 
 Supported types:
 ${supportedCategoriesList}`}
