@@ -44,6 +44,7 @@ export const chatModels: Array<ChatModel> = [
       ATTACHMENT_TYPES.SPREADSHEET_CSV.CSV
     ],
   },
+  /* Temporarily hidden
   {
     id: 'claude-sonnet',
     name: 'Claude 3.5 Sonnet',
@@ -56,6 +57,7 @@ export const chatModels: Array<ChatModel> = [
       ATTACHMENT_TYPES.SPREADSHEET_CSV.CSV
     ],
   },
+  */
 ];
 
 export function isAttachmentTypeSupported(modelId: string, contentType: string): boolean {
