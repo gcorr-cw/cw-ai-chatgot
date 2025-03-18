@@ -2,6 +2,8 @@
 
 import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { Search, X } from 'lucide-react';
 
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
@@ -16,10 +18,31 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { Input } from './ui/input';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Focus search input when search is shown
+  useEffect(() => {
+    if (showSearch) {
+      const searchInput = document.getElementById('chat-search');
+      if (searchInput) {
+        searchInput.focus();
+      }
+    }
+  }, [showSearch]);
+
+  // Handle clearing search and closing search box
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    if (!searchQuery) {
+      setShowSearch(false);
+    }
+  };
 
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
@@ -39,28 +62,69 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 CW-ChatGPT
               </span>
             </Link>
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className={`p-2 h-fit ${showSearch ? 'text-primary' : ''}`}
+                    onClick={() => setShowSearch(!showSearch)}
+                  >
+                    <Search size={18} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent align="end">Search Chats</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className="p-2 h-fit"
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push('/');
+                      router.refresh();
+                    }}
+                  >
+                    <PlusIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent align="end">New Chat</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+          {showSearch && (
+            <div className="mt-2 px-1 relative">
+              <Input
+                id="chat-search"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 pl-8 pr-8 bg-muted/30"
+              />
+              <Search 
+                size={14} 
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" 
+              />
+              {searchQuery && (
                 <Button
                   variant="ghost"
-                  type="button"
-                  className="p-2 h-fit"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    router.push('/');
-                    router.refresh();
-                  }}
+                  size="icon"
+                  className="h-4 w-4 absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={handleClearSearch}
                 >
-                  <PlusIcon />
+                  <X size={14} />
+                  <span className="sr-only">Clear search</span>
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent align="end">New Chat</TooltipContent>
-            </Tooltip>
-          </div>
+              )}
+            </div>
+          )}
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarHistory user={user} />
+        <SidebarHistory user={user} searchQuery={searchQuery} />
       </SidebarContent>
       <SidebarFooter></SidebarFooter>
     </Sidebar>

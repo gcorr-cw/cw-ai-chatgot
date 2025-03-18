@@ -243,17 +243,30 @@ export const ChatItem = memo(PureChatItem, (prevProps, nextProps) => {
   return true;
 });
 
-export function SidebarHistory({ user }: { user: User | undefined }) {
+export function SidebarHistory({ user, searchQuery }: { user: User | undefined, searchQuery?: string }) {
   const { setOpenMobile } = useSidebar();
   const { id } = useParams();
   const pathname = usePathname();
+  
+  // Use SWR to fetch chat history - now use the search API when there's a search query
   const {
     data: history,
     isLoading,
     mutate,
-  } = useSWR<Array<Chat>>(user ? '/api/history' : null, fetcher, {
-    fallbackData: [],
-  });
+  } = useSWR<Array<Chat>>(
+    user 
+      ? searchQuery?.trim() 
+        ? `/api/search?q=${encodeURIComponent(searchQuery.trim())}` 
+        : '/api/history'
+      : null, 
+    fetcher, 
+    {
+      fallbackData: [],
+    }
+  );
+
+  // Track if we're specifically loading search results
+  const isSearchLoading = isLoading && searchQuery?.trim();
 
   useEffect(() => {
     mutate();
@@ -299,6 +312,41 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     );
   }
 
+  // Show special loading state for search
+  if (isSearchLoading) {
+    return (
+      <SidebarGroup>
+        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+          Searching...
+        </div>
+        <SidebarGroupContent>
+          <div className="flex flex-col">
+            {[44, 32, 28, 64, 52].map((item, index) => (
+              <div
+                key={item}
+                className="rounded-md h-8 flex gap-2 px-2 items-center"
+              >
+                <div
+                  className={`h-4 rounded-md flex-1 max-w-[--skeleton-width] bg-sidebar-accent-foreground/10 animate-pulse`}
+                  style={
+                    {
+                      '--skeleton-width': `${item}%`,
+                      animationDelay: `${index * 100}ms`,
+                    } as React.CSSProperties
+                  }
+                />
+              </div>
+            ))}
+            <div className="px-2 py-3 text-zinc-500 flex flex-col items-center text-center">
+              <p className="text-xs opacity-75 italic">Sorry I'm so slow... I will get faster!</p>
+            </div>
+          </div>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  }
+
+  // Regular loading state (for initial load)
   if (isLoading) {
     return (
       <SidebarGroup>
@@ -332,8 +380,39 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     return (
       <SidebarGroup>
         <SidebarGroupContent>
-          <div className="px-2 text-zinc-500 w-full flex flex-row justify-center items-center text-sm gap-2">
-            Your conversations will appear here once you start chatting!
+          <div className="px-2 text-zinc-500 w-full flex flex-col items-center text-sm gap-2 py-4">
+            {searchQuery?.trim() 
+              ? (
+                <>
+                  <p>No chats found matching "{searchQuery}"</p>
+                  <p className="text-xs opacity-75">Try a different search term</p>
+                </>
+              ) 
+              : (
+                <p>Your conversations will appear here once you start chatting!</p>
+              )
+            }
+          </div>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  }
+
+  // Filter chat history based on search query
+  const filteredHistory = history && searchQuery?.trim() 
+    ? history.filter(chat => 
+        chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ) 
+    : history;
+
+  // Display a message when no search results found
+  if (searchQuery?.trim() && filteredHistory?.length === 0) {
+    return (
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <div className="px-2 text-zinc-500 w-full flex flex-col items-center text-sm gap-2 py-4">
+            <p>No chats found matching "{searchQuery}"</p>
+            <p className="text-xs opacity-75">Try a different search term</p>
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
@@ -378,9 +457,9 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
-            {history &&
+            {filteredHistory &&
               (() => {
-                const groupedChats = groupChatsByDate(history);
+                const groupedChats = groupChatsByDate(filteredHistory);
 
                 return (
                   <>
