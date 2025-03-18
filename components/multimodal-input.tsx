@@ -481,6 +481,47 @@ ${supportedCategoriesList}`}
     }
   };
 
+  // Handle paste events for images
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    // Continue with default paste behavior for text
+    if (!e.clipboardData.items) return;
+    
+    const items = Array.from(e.clipboardData.items);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
+    
+    if (imageItems.length === 0) return; // No images in clipboard
+    
+    // Prevent default paste only if we found images
+    // This allows normal text pasting to work as expected
+    e.preventDefault();
+    
+    try {
+      const files = await Promise.all(
+        imageItems.map(async (item) => {
+          const blob = item.getAsFile();
+          if (!blob) return null;
+          
+          // Generate a filename with timestamp and type
+          const extension = blob.type.split('/')[1] || 'png';
+          const filename = `pasted-image-${Date.now()}.${extension}`;
+          
+          // Create a new File object with a proper name
+          return new File([blob], filename, { type: blob.type });
+        })
+      );
+      
+      // Filter out any null values and process the files
+      const validFiles = files.filter(file => file !== null) as File[];
+      if (validFiles.length > 0) {
+        await processFiles(validFiles);
+        toast.success(`Pasted ${validFiles.length} image${validFiles.length > 1 ? 's' : ''}`);
+      }
+    } catch (error) {
+      console.error('Error processing pasted image:', error);
+      toast.error('Failed to process pasted image');
+    }
+  };
+
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
     
@@ -589,6 +630,7 @@ ${supportedCategoriesList}`}
             placeholder="Send a message..."
             value={input}
             onChange={handleInput}
+            onPaste={handlePaste}
             className={cx(
               'min-h-[24px] max-h-[300px] overflow-y-auto resize-none rounded-t-2xl !text-base bg-muted border-none dark:border-zinc-700',
               className,
