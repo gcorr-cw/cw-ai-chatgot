@@ -632,7 +632,7 @@ ${supportedCategoriesList}`}
             onChange={handleInput}
             onPaste={handlePaste}
             className={cx(
-              'min-h-[24px] max-h-[300px] overflow-y-auto resize-none rounded-t-2xl !text-base bg-muted border-none dark:border-zinc-700',
+              'min-h-[24px] max-h-[300px] overflow-y-auto resize-none rounded-t-2xl !text-base bg-muted border-none dark:border-zinc-700 placeholder:text-zinc-400 dark:placeholder:text-zinc-400/80',
               className,
             )}
             style={{ marginBottom: '44px' }}
@@ -679,7 +679,7 @@ ${supportedCategoriesList}`}
               <Button
                 variant="ghost"
                 size="icon"
-                className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+                className="rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 text-gray-700 dark:text-gray-300"
                 disabled={isLoading}
                 aria-disabled={isLoading}
                 onClick={(e) => {
@@ -717,7 +717,7 @@ ${supportedCategoriesList}`}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={`rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 ${selectedArtifact ? 'bg-blue-200 dark:bg-blue-600/70' : ''}`}
+                    className={`rounded-md rounded-bl-lg p-[7px] w-[30px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 text-gray-700 dark:text-gray-300 ${selectedArtifact ? 'bg-blue-200 dark:bg-blue-600/70' : ''}`}
                     disabled={isLoading}
                     aria-disabled={isLoading}
                     onClick={(e) => {
@@ -880,7 +880,7 @@ function AttachmentsButton({
   return (
     <Button
       data-testid="attachments-button"
-      className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
+      className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 text-gray-700 dark:text-gray-300"
       onClick={(event) => {
         event.preventDefault();
         fileInputRef.current?.click();

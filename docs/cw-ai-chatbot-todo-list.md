@@ -22,16 +22,16 @@ What's coming: SAML
 * Where to house beta/production site
 * Create dev sandbox backend resources (S3/RDS)
 * Fix resume scroll down icon so it doesn't overlap the input box when the input box grows due to long text input 
-* Block Word, Excel, Powerpint, etc.
-* Block use of models if chat has unsupported attachment types, or customize the toast error; block use of file uploads of types not supported by models
+
 * Fix issues with attachment uploads failing if the first attempt failed or got blocked
 * Fix chat history menu icon outline after clicking on it
 * Reset model to default on new chat or when selecting an existing chat if o3mini is selected
+* Move sensitive environment variables to AWS SSM or some secure solution
 
 ## Misc todos:
 * Clear model selector attachment toast error as if a supported model is selected before the toast timeout expires
-* Add drag drop file upload functionality
-* Add paste image to input box functionality
+
+
 * Several elements of Markdown formatting in the document artifact are broken   
 * Fix outlines around buttons that appear on occasion, the user-nav, model selector when text is entered into the input box. And fix the generate menu, if you open it and then click outside of it, it will close and create an outline around it and not let you type until you click into the input box a second time. 
 * Add function to remember last model used with each prior chat history (maybe extend DB scheme?)
@@ -52,7 +52,7 @@ From Matt 3-13:
 * Make sidebar open by default for new users
 * Copy AI assitant message function is broken, it only copies the first word
 * Input box has no scroll bar
-* Improve nodel selection drop down names and descriptions - simplify for staff, but allow full model names for advanced users (maybe an advanced toggle to expand the models and names?)
+
 
 
 
@@ -78,6 +78,11 @@ From Matt 3-13:
 * Display full chat title on hover (tool tip)
 * Change "public" to "shared" (require any user auth)
 * small code blocks are being rendered as full-width and force a line wrap and generating numerous browser errors
+* Add drag drop file upload functionality
+* Block use of models if chat has unsupported attachment types, or customize the toast error; block use of file uploads of types not supported by models
+* Add paste image to input box functionality
+* Improve nodel selection drop down names and descriptions - simplify for staff, but allow full model names for advanced users (maybe an advanced toggle to expand the models and names?)
+
 
 Fixed:
 
