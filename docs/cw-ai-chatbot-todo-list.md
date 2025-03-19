@@ -1,6 +1,14 @@
 ai-chatbot-3-Todos
 
+move Advanced options to the top below username and disable hidden search feature
 
+
+# Next Steps
+
+* Enroll a few more beta testers
+* Have a few testers compare results with ChatGPT using the same models and queries
+* Need to find and fix bugs RE artifacts getting lost in results and "stuck pending document updates" issue, which may be related to the artifacts getting lost
+* 
 # What new for staff?
 
 AUP - Modern features - canvas, attachments, image creation, reasoning models, sensitive information, ability to scoll up during ai responses
@@ -16,8 +24,8 @@ What's coming: SAML
 
 
 ## Beta punch list
-* Implement email OTP and Forgot password
-* IP Allowlist
+* Implement email OTP and Forgot password, or Cognito or SAML
+* IP Allowlist or move to production account and non-public VPC subnets
 * Communcation RE senstive info and only authorized beta testers
 * Where to house beta/production site
 * Create dev sandbox backend resources (S3/RDS)
@@ -27,6 +35,7 @@ What's coming: SAML
 * Fix chat history menu icon outline after clicking on it
 * Reset model to default on new chat or when selecting an existing chat if o3mini is selected
 * Move sensitive environment variables to AWS SSM or some secure solution
+* Fix o3 mini response markdown rendering w/ `──────────────────────────────`. Find out what is returned by the LLM in the raw response.
 
 ## Misc todos:
 * Clear model selector attachment toast error as if a supported model is selected before the toast timeout expires

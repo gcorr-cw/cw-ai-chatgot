@@ -1,33 +1,40 @@
 import 'server-only';
 
 import { genSaltSync, hashSync } from 'bcrypt-ts';
-import { and, asc, desc, eq, gt, gte, inArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { sql as rawSql } from 'drizzle-orm';
 import postgres from 'postgres';
 
 import {
-  user,
   chat,
-  type User,
   document,
-  type Suggestion,
-  suggestion,
-  type Message,
   message,
+  suggestion,
+  user,
   vote,
 } from './schema';
-import { ArtifactKind } from '@/components/artifact';
+
+// Define rawSql as an alias for sql
+const rawSql = sql;
+
+import {
+  type User,
+  type Suggestion,
+  type Message,
+} from './schema';
+
+import { type ArtifactKind } from '@/components/artifact';
 
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
 /**
- * Search Chat rows (by title) and their associated Message rows (by content)
- * for the given userId, matching the provided query string using full-text search.
+ * Search Chat rows (by title), their associated Message rows (by content),
+ * and Document rows (by title and content) for the given userId,
+ * matching the provided query string using full-text search.
  *
- * Assumes you have GIN indexes on the "search_tsv" column of Chat and Message tables.
+ * Assumes you have GIN indexes on the "search_tsv" column of Chat, Message, and Document tables.
  */
 export async function searchChatsByUser({
   userId,
@@ -35,82 +42,138 @@ export async function searchChatsByUser({
 }: {
   userId: string;
   query: string;
-}) {
+}): Promise<(typeof chat.$inferSelect & { matchType?: 'title' | 'message' | 'both' | 'document' })[]> {
   try {
-    console.log(`Searching for "${query}" for user ${userId}`);
-    
-    // First, find all chats that match the query in their title
-    const chatTitleResults = await db
+    if (!query.trim()) {
+      return [];
+    }
+
+    // First, get all matching chats from chat titles and message content in a single query
+    // This is more efficient than separate queries
+    const combinedResults = await db
       .select({
         chat: chat,
+        matchInTitle: rawSql`${chat.search_tsv} @@ plainto_tsquery('english', ${query})`,
+        matchInMessage: rawSql`EXISTS (
+          SELECT 1 FROM "Message" m 
+          WHERE m."chatId" = ${chat.id} 
+          AND m.search_tsv @@ plainto_tsquery('english', ${query})
+        )`
       })
       .from(chat)
       .where(
         and(
           eq(chat.userId, userId),
-          rawSql`${chat.search_tsv} @@ plainto_tsquery('english', ${query})`
+          or(
+            rawSql`${chat.search_tsv} @@ plainto_tsquery('english', ${query})`,
+            rawSql`EXISTS (
+              SELECT 1 FROM "Message" m 
+              WHERE m."chatId" = ${chat.id} 
+              AND m.search_tsv @@ plainto_tsquery('english', ${query})
+            )`
+          )
         )
       )
       .orderBy(desc(chat.createdAt));
-    
-    // Then, find all chats that have messages matching the query
-    const messageContentResults = await db
-      .select({
-        chat: chat,
-        messageId: message.id,
-      })
-      .from(chat)
-      .leftJoin(message, eq(message.chatId, chat.id))
-      .where(
-        and(
-          eq(chat.userId, userId),
-          rawSql`${message.search_tsv} @@ plainto_tsquery('english', ${query})`
-        )
-      )
-      .groupBy(chat.id, message.id)
-      .orderBy(desc(chat.createdAt));
-    
-    // Combine the results, removing duplicates
-    const chatTitleMatches = chatTitleResults.map(result => result.chat);
-    const messageContentMatches = messageContentResults.map(result => result.chat);
-    
-    // Use a Map to deduplicate chats by ID
-    const uniqueChatsMap = new Map();
-    
-    // Add chats that matched by title
-    chatTitleMatches.forEach(chat => {
-      uniqueChatsMap.set(chat.id, {
-        ...chat,
-        matchType: 'title',
-      });
-    });
-    
-    // Add chats that matched by message content
-    messageContentMatches.forEach(chat => {
-      if (!uniqueChatsMap.has(chat.id)) {
-        uniqueChatsMap.set(chat.id, {
-          ...chat,
-          matchType: 'message',
-        });
-      } else if (uniqueChatsMap.get(chat.id).matchType === 'title') {
-        // If it matched both title and message, mark it as both
-        uniqueChatsMap.set(chat.id, {
-          ...chat,
-          matchType: 'both',
-        });
+
+    // Process results to add matchType
+    const chatResults = combinedResults.map(result => {
+      let matchType: 'title' | 'message' | 'both' = 'message';
+      
+      if (result.matchInTitle && result.matchInMessage) {
+        matchType = 'both';
+      } else if (result.matchInTitle) {
+        matchType = 'title';
       }
+      
+      return {
+        ...result.chat,
+        matchType
+      };
     });
+
+    // Track all chat IDs we've already found to avoid duplicates
+    const chatIdSet = new Set(chatResults.map(chat => chat.id));
+
+    // Now search documents and find their associated chats
+    // This is a more efficient approach that avoids the "always truthy" lint error
     
-    // Convert the Map back to an array
-    const combinedResults = Array.from(uniqueChatsMap.values());
+    // First, find matching documents
+    const matchingDocuments = await db
+      .select({
+        id: document.id
+      })
+      .from(document)
+      .where(
+        and(
+          eq(document.userId, userId),
+          // Use the SQL template literal for the full-text search
+          sql`${document.search_tsv} @@ plainto_tsquery('english', ${query})`
+        )
+      );
     
+    // Extract document IDs
+    const matchingDocIds = matchingDocuments.map(doc => doc.id);
+    
+    // If we found matching documents, find chats that reference them
+    let documentChatIds: string[] = [];
+    
+    if (matchingDocIds.length > 0) {
+      // Find messages that reference these document IDs
+      const documentChatMatches = await db
+        .select({
+          chatId: message.chatId
+        })
+        .from(message)
+        .innerJoin(
+          chat,
+          eq(message.chatId, chat.id)
+        )
+        .where(
+          and(
+            eq(chat.userId, userId),
+            // For each document ID, check if it's referenced in the message content
+            or(...matchingDocIds.map(docId => 
+              sql`${message.content}::text LIKE ${'%' + docId + '%'}`
+            ))
+          )
+        );
+      
+      // Extract unique chat IDs that we haven't seen yet
+      documentChatIds = Array.from(new Set(
+        documentChatMatches
+          .map(match => match.chatId)
+          .filter(chatId => chatId && !chatIdSet.has(chatId))
+      ));
+    }
+    
+    // Fetch the full chat objects for these IDs
+    let documentChatResults: (typeof chat.$inferSelect & { matchType: 'document' })[] = [];
+    
+    if (documentChatIds.length > 0) {
+      const documentChats = await db
+        .select()
+        .from(chat)
+        .where(
+          inArray(chat.id, documentChatIds)
+        );
+      
+      documentChatResults = documentChats.map(chatResult => ({
+        ...chatResult,
+        matchType: 'document' as const
+      }));
+    }
+
+    // Combine all results
+    const allResults = [...chatResults, ...documentChatResults];
+
     // Sort by creation date (newest first)
-    combinedResults.sort((a, b) => {
+    allResults.sort((a, b) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-    
-    console.log(`Search found ${combinedResults.length} results (${chatTitleMatches.length} title matches, ${messageContentMatches.length} message matches)`);
-    return combinedResults;
+
+    console.log(`Search found ${allResults.length} results`);
+    return allResults;
   } catch (error) {
     console.error('Failed to search chats in database', error);
     throw error;

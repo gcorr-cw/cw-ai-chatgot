@@ -74,7 +74,7 @@ const PureChatItem = ({
   onDelete,
   setOpenMobile,
 }: {
-  chat: Chat & { matchType?: 'title' | 'message' | 'both' };
+  chat: Chat & { matchType?: 'title' | 'message' | 'both' | 'document', documentId?: string, documentKind?: string };
   isActive: boolean;
   onDelete: (chatId: string) => void;
   setOpenMobile: (open: boolean) => void;
@@ -123,7 +123,10 @@ const PureChatItem = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <SidebarMenuButton asChild isActive={isActive}>
-              <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
+              <Link 
+                href={`/chat/${chat.id}`} 
+                onClick={() => setOpenMobile(false)}
+              >
                 <div 
                   className="w-full overflow-hidden"
                   style={{
@@ -151,6 +154,11 @@ const PureChatItem = ({
                           Title & Message match
                         </span>
                       )}
+                      {chat.matchType === 'document' && (
+                        <span className="bg-orange-500/20 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded-sm">
+                          Document match
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>
@@ -175,6 +183,11 @@ const PureChatItem = ({
                 {chat.matchType === 'both' && (
                   <span className="bg-purple-500/20 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-sm">
                     Title & Message match
+                  </span>
+                )}
+                {chat.matchType === 'document' && (
+                  <span className="bg-orange-500/20 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded-sm">
+                    Document match
                   </span>
                 )}
               </span>
@@ -301,7 +314,11 @@ export function SidebarHistory({ user, searchQuery }: { user: User | undefined, 
     data: history,
     isLoading,
     mutate,
-  } = useSWR<Array<Chat & { matchType?: 'title' | 'message' | 'both' }>>(
+  } = useSWR<Array<Chat & { 
+    matchType?: 'title' | 'message' | 'both' | 'document',
+    documentId?: string,
+    documentKind?: string
+  }>>(
     user 
       ? searchQuery?.trim() 
         ? `/api/search?q=${encodeURIComponent(searchQuery.trim())}` 
