@@ -39,32 +39,78 @@ export async function searchChatsByUser({
   try {
     console.log(`Searching for "${query}" for user ${userId}`);
     
-    const results = await db
+    // First, find all chats that match the query in their title
+    const chatTitleResults = await db
       .select({
         chat: chat,
+      })
+      .from(chat)
+      .where(
+        and(
+          eq(chat.userId, userId),
+          rawSql`${chat.search_tsv} @@ plainto_tsquery('english', ${query})`
+        )
+      )
+      .orderBy(desc(chat.createdAt));
+    
+    // Then, find all chats that have messages matching the query
+    const messageContentResults = await db
+      .select({
+        chat: chat,
+        messageId: message.id,
       })
       .from(chat)
       .leftJoin(message, eq(message.chatId, chat.id))
       .where(
         and(
           eq(chat.userId, userId),
-          or(
-            // Full-text search on Chat using its search_tsv column
-            rawSql`${chat.search_tsv} @@ plainto_tsquery('english', ${query})`,
-            // Full-text search on Message using its search_tsv column
-            rawSql`${message.search_tsv} @@ plainto_tsquery('english', ${query})`
-          )
+          rawSql`${message.search_tsv} @@ plainto_tsquery('english', ${query})`
         )
       )
-      // Use groupBy to avoid duplicate Chat rows
-      .groupBy(chat.id)
+      .groupBy(chat.id, message.id)
       .orderBy(desc(chat.createdAt));
     
-    // Extract just the chat objects from the results
-    const chats = results.map(result => result.chat);
+    // Combine the results, removing duplicates
+    const chatTitleMatches = chatTitleResults.map(result => result.chat);
+    const messageContentMatches = messageContentResults.map(result => result.chat);
     
-    console.log(`Search found ${chats.length} results`);
-    return chats;
+    // Use a Map to deduplicate chats by ID
+    const uniqueChatsMap = new Map();
+    
+    // Add chats that matched by title
+    chatTitleMatches.forEach(chat => {
+      uniqueChatsMap.set(chat.id, {
+        ...chat,
+        matchType: 'title',
+      });
+    });
+    
+    // Add chats that matched by message content
+    messageContentMatches.forEach(chat => {
+      if (!uniqueChatsMap.has(chat.id)) {
+        uniqueChatsMap.set(chat.id, {
+          ...chat,
+          matchType: 'message',
+        });
+      } else if (uniqueChatsMap.get(chat.id).matchType === 'title') {
+        // If it matched both title and message, mark it as both
+        uniqueChatsMap.set(chat.id, {
+          ...chat,
+          matchType: 'both',
+        });
+      }
+    });
+    
+    // Convert the Map back to an array
+    const combinedResults = Array.from(uniqueChatsMap.values());
+    
+    // Sort by creation date (newest first)
+    combinedResults.sort((a, b) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    
+    console.log(`Search found ${combinedResults.length} results (${chatTitleMatches.length} title matches, ${messageContentMatches.length} message matches)`);
+    return combinedResults;
   } catch (error) {
     console.error('Failed to search chats in database', error);
     throw error;

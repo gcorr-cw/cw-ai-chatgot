@@ -74,7 +74,7 @@ const PureChatItem = ({
   onDelete,
   setOpenMobile,
 }: {
-  chat: Chat;
+  chat: Chat & { matchType?: 'title' | 'message' | 'both' };
   isActive: boolean;
   onDelete: (chatId: string) => void;
   setOpenMobile: (open: boolean) => void;
@@ -134,6 +134,25 @@ const PureChatItem = ({
                   <span className="block whitespace-nowrap overflow-hidden">
                     {chat.title}
                   </span>
+                  {chat.matchType && (
+                    <span className="text-xs mt-0.5 block">
+                      {chat.matchType === 'title' && (
+                        <span className="bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-sm">
+                          Title match
+                        </span>
+                      )}
+                      {chat.matchType === 'message' && (
+                        <span className="bg-green-500/20 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-sm">
+                          Message match
+                        </span>
+                      )}
+                      {chat.matchType === 'both' && (
+                        <span className="bg-purple-500/20 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-sm">
+                          Title & Message match
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -141,6 +160,25 @@ const PureChatItem = ({
           <TooltipContent side="right" align="start" className="flex flex-col">
             <span>{chat.title}</span>
             <span className="text-xs text-foreground/50">{formattedDate}</span>
+            {chat.matchType && (
+              <span className="text-xs text-foreground/70 mt-1">
+                {chat.matchType === 'title' && (
+                  <span className="bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-sm">
+                    Title match
+                  </span>
+                )}
+                {chat.matchType === 'message' && (
+                  <span className="bg-green-500/20 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-sm">
+                    Message match
+                  </span>
+                )}
+                {chat.matchType === 'both' && (
+                  <span className="bg-purple-500/20 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-sm">
+                    Title & Message match
+                  </span>
+                )}
+              </span>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -263,7 +301,7 @@ export function SidebarHistory({ user, searchQuery }: { user: User | undefined, 
     data: history,
     isLoading,
     mutate,
-  } = useSWR<Array<Chat>>(
+  } = useSWR<Array<Chat & { matchType?: 'title' | 'message' | 'both' }>>(
     user 
       ? searchQuery?.trim() 
         ? `/api/search?q=${encodeURIComponent(searchQuery.trim())}` 
@@ -410,9 +448,7 @@ export function SidebarHistory({ user, searchQuery }: { user: User | undefined, 
 
   // Filter chat history based on search query
   const filteredHistory = history && searchQuery?.trim() 
-    ? history.filter(chat => 
-        chat.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ) 
+    ? history // Don't filter again - the server already did the search
     : history;
 
   // Display a message when no search results found
