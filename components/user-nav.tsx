@@ -1,9 +1,11 @@
 'use client';
-import { ChevronUp, LogOut, Moon, Sun } from 'lucide-react';
+import { ChevronUp, LogOut, Moon, Sun, MessageSquare, FileText, GitCompare } from 'lucide-react';
 import Image from 'next/image';
 import type { User } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 import {
   DropdownMenu,
@@ -13,9 +15,32 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export function UserNav({ user }: { user: User }) {
   const { setTheme, theme } = useTheme();
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
+  // Load advanced options state from localStorage on initial render
+  useEffect(() => {
+    const savedState = localStorage.getItem('showAdvancedOptions');
+    if (savedState !== null) {
+      setShowAdvancedOptions(savedState === 'true');
+    }
+  }, []);
+
+  // Update localStorage when advanced options state changes
+  const handleAdvancedOptionsChange = (value: boolean) => {
+    setShowAdvancedOptions(value);
+    localStorage.setItem('showAdvancedOptions', String(value));
+    
+    // Dispatch a custom event to notify other components
+    const event = new CustomEvent('advancedOptionsChanged', { 
+      detail: { enabled: value } 
+    });
+    window.dispatchEvent(event);
+  };
 
   return (
     <DropdownMenu>
@@ -48,7 +73,6 @@ export function UserNav({ user }: { user: User }) {
           )}
           {theme === 'light' ? 'Dark mode' : 'Light mode'}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <button
             type="button"
@@ -63,6 +87,44 @@ export function UserNav({ user }: { user: User }) {
             Sign out
           </button>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <div className="px-2 py-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="advanced-options" className="text-sm cursor-pointer text-gray-500">Advanced options</Label>
+          </div>
+          <div className="ml-4">
+            <Switch 
+              id="advanced-options" 
+              checked={showAdvancedOptions}
+              onCheckedChange={handleAdvancedOptionsChange}
+              size="sm"
+              className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-500"
+            />
+          </div>
+        </div>
+        
+        {showAdvancedOptions && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/" className="flex items-center gap-2 cursor-pointer">
+                <MessageSquare className="h-4 w-4" />
+                Chat
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/markdown" className="flex items-center gap-2 cursor-pointer">
+                <FileText className="h-4 w-4" />
+                Markdown utility
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/diffview" className="flex items-center gap-2 cursor-pointer">
+                <GitCompare className="h-4 w-4" />
+                Text compare
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

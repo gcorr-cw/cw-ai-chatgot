@@ -25,6 +25,29 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { setOpenMobile } = useSidebar();
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [advancedOptionsEnabled, setAdvancedOptionsEnabled] = useState(false);
+
+  // Check if advanced options are enabled
+  useEffect(() => {
+    const savedState = localStorage.getItem('showAdvancedOptions');
+    setAdvancedOptionsEnabled(savedState === 'true');
+    
+    // Listen for custom event for advanced options changes
+    const handleAdvancedOptionsChange = (e: CustomEvent) => {
+      setAdvancedOptionsEnabled(e.detail.enabled);
+      // Hide search if advanced options are disabled
+      if (!e.detail.enabled) {
+        setShowSearch(false);
+      }
+    };
+    
+    // Add event listener for the custom event
+    window.addEventListener('advancedOptionsChanged', handleAdvancedOptionsChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('advancedOptionsChanged', handleAdvancedOptionsChange as EventListener);
+    };
+  }, []);
 
   // Focus search input when search is shown
   useEffect(() => {
@@ -63,39 +86,41 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               </span>
             </Link>
             <div className="flex items-center gap-1">
+              {advancedOptionsEnabled && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      className={`p-2 h-fit ${showSearch ? 'text-primary' : ''}`}
+                      onClick={() => setShowSearch(!showSearch)}
+                    >
+                      <Search size={18} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent align="end">Search Chats</TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    type="button"
-                    className={`p-2 h-fit ${showSearch ? 'text-primary' : ''}`}
-                    onClick={() => setShowSearch(!showSearch)}
-                  >
-                    <Search size={18} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent align="end">Search Chats</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    className="p-2 h-fit"
+                    size="icon"
+                    className="h-8 w-8"
                     onClick={() => {
-                      setOpenMobile(false);
                       router.push('/');
-                      router.refresh();
+                      setOpenMobile(false);
                     }}
                   >
                     <PlusIcon />
+                    <span className="sr-only">New Chat</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent align="end">New Chat</TooltipContent>
+                <TooltipContent>New Chat</TooltipContent>
               </Tooltip>
             </div>
           </div>
-          {showSearch && (
+          {showSearch && advancedOptionsEnabled && (
             <div className="mt-2 px-1 relative">
               <Input
                 id="chat-search"
