@@ -62,35 +62,9 @@ export function UserNav({ user }: { user: User }) {
           </div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer flex items-center gap-2"
-          onSelect={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        >
-          {theme === 'light' ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
-          {theme === 'light' ? 'Dark mode' : 'Light mode'}
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <button
-            type="button"
-            className="w-full cursor-pointer flex items-center gap-2"
-            onClick={() => {
-              signOut({
-                redirectTo: '/',
-              });
-            }}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <div className="px-2 py-1.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Label htmlFor="advanced-options" className="text-sm cursor-pointer text-gray-500">Advanced options</Label>
+            <Label htmlFor="advanced-options" className="text-sm cursor-pointer text-gray-400 dark:text-gray-500">Advanced options</Label>
           </div>
           <div className="ml-4">
             <Switch 
@@ -98,7 +72,7 @@ export function UserNav({ user }: { user: User }) {
               checked={showAdvancedOptions}
               onCheckedChange={handleAdvancedOptionsChange}
               size="sm"
-              className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-500"
+              className="data-[state=checked]:bg-gray-600 data-[state=unchecked]:bg-gray-400 dark:data-[state=checked]:bg-gray-400 dark:data-[state=unchecked]:bg-gray-600"
             />
           </div>
         </div>
@@ -125,6 +99,33 @@ export function UserNav({ user }: { user: User }) {
             </DropdownMenuItem>
           </>
         )}
+        
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer flex items-center gap-2"
+          onSelect={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        >
+          {theme === 'light' ? (
+            <Moon className="h-4 w-4" />
+          ) : (
+            <Sun className="h-4 w-4" />
+          )}
+          {theme === 'light' ? 'Dark mode' : 'Light mode'}
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <button
+            type="button"
+            className="w-full cursor-pointer flex items-center gap-2"
+            onClick={() => {
+              signOut({
+                redirectTo: '/',
+              });
+            }}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,7 +1,5 @@
 ai-chatbot-3-Todos
 
-move Advanced options to the top below username and disable hidden search feature
-
 
 # Next Steps
 
@@ -19,23 +17,26 @@ What's coming: SAML
 # Todos:
 
 !! Fix narrow view right side overflow
-!! Hide Claude from all users except a key group of users 
 !! Document key procedures for EB deploy before I forget
 
 
 ## Beta punch list
 * Implement email OTP and Forgot password, or Cognito or SAML
 * IP Allowlist or move to production account and non-public VPC subnets
-* Communcation RE senstive info and only authorized beta testers
+* Communication RE senstive info and only authorized beta testers
 * Where to house beta/production site
 * Create dev sandbox backend resources (S3/RDS)
-* Fix resume scroll down icon so it doesn't overlap the input box when the input box grows due to long text input 
 
+## Beta bugs to fix
+* Fix resume scroll down icon so it doesn't overlap the input box when the input box grows due to long text input 
 * Fix issues with attachment uploads failing if the first attempt failed or got blocked
-* Fix chat history menu icon outline after clicking on it
-* Reset model to default on new chat or when selecting an existing chat if o3mini is selected
-* Move sensitive environment variables to AWS SSM or some secure solution
+* Reset model to default on new chat or when selecting an existing chat, if o3mini is selected
+
 * Fix o3 mini response markdown rendering w/ `──────────────────────────────`. Find out what is returned by the LLM in the raw response.
+
+## Production todos:
+* Move sensitive environment variables to AWS SSM or some secure solution
+* 
 
 ## Misc todos:
 * Clear model selector attachment toast error as if a supported model is selected before the toast timeout expires
@@ -94,7 +95,7 @@ From Matt 3-13:
 
 
 Fixed:
-
+* Fix chat history menu icon outline after clicking on it
 
 # Dev notes:
 ===========

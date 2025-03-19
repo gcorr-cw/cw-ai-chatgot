@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Markdown } from '@/components/markdown';
 import { UserNavWrapper } from '@/components/user-nav-wrapper';
 import { useSession } from 'next-auth/react';
-import { X, Clipboard } from 'lucide-react';
+import { X, Clipboard, Link, Link2Off } from 'lucide-react';
 
 // Add typings for the window methods from our markdown scripts
 declare global {
@@ -47,20 +47,26 @@ HTML example:
 interface MarkdownConverterProps {}
 
 export default function MarkdownConverter({}: MarkdownConverterProps) {
-  const [markdown, setMarkdown] = useState('');
+  const [markdown, setMarkdown] = useState<string>('');
   const [showInstructions, setShowInstructions] = useState(false);
   const [showInputInstructions, setShowInputInstructions] = useState(true);
   const [standardPasteEnabled, setStandardPasteEnabled] = useState(false);
+  const [syncScrolling, setSyncScrolling] = useState(true); // Default to synchronized scrolling
   const [mounted, setMounted] = useState(false);
   const [leftPaneWidth, setLeftPaneWidth] = useState(50); // percentage width of left pane
   const [isDragging, setIsDragging] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false); // To prevent infinite scroll loops
+  const [isNearCenter, setIsNearCenter] = useState(false); // Track if handle is near center for snapping
   
   const { theme } = useTheme();
   const { data: session } = useSession();
   const outputRef = useRef<HTMLTextAreaElement>(null);
   const pastebinRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null); // Reference to the preview pane for scrolling
   const isPastingRef = useRef<boolean>(false);
   const wrapperRef = useRef<HTMLElement>(null);
+  const leftPaneRef = useRef<HTMLDivElement>(null);
+  const rightPaneRef = useRef<HTMLDivElement>(null);
 
   // Function to handle markdown changes in the textarea
   const handleMarkdownChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -289,22 +295,30 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
       const centerPosition = containerWidth / 2;
       
       // Calculate the new width percentage
-      let leftPaneWidth = Math.max(20, Math.min(80, (newPosition / containerWidth) * 100));
+      let newLeftPaneWidth = Math.max(20, Math.min(80, (newPosition / containerWidth) * 100));
       
-      // Snap to center when within 10px of the center (20px total snap area)
-      if (Math.abs(newPosition - centerPosition) < 40) {
-        leftPaneWidth = 50;
+      // Check if we're near center for snapping (within 40px)
+      const nearCenter = Math.abs(newPosition - centerPosition) < 40;
+      setIsNearCenter(nearCenter);
+      
+      // Snap to center when within 40px of the center
+      if (nearCenter) {
+        newLeftPaneWidth = 50;
       }
       
-      const rightPaneWidth = 100 - leftPaneWidth;
+      // Update state with the new width
+      setLeftPaneWidth(newLeftPaneWidth);
       
-      // Apply the new widths
-      wrapperRef.current.style.gridTemplateColumns = `${leftPaneWidth}% ${rightPaneWidth}%`;
-      setLeftPaneWidth(leftPaneWidth);
+      // Apply the new widths directly to the panes
+      if (leftPaneRef.current && rightPaneRef.current) {
+        leftPaneRef.current.style.width = `${newLeftPaneWidth}%`;
+        rightPaneRef.current.style.width = `${100 - newLeftPaneWidth}%`;
+      }
     };
     
     const handleMouseUp = () => {
       setIsDragging(false);
+      setIsNearCenter(false); // Reset near center state when done dragging
     };
     
     if (isDragging) {
@@ -333,18 +347,64 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
     };
   }, [isDragging]);
 
-  // Custom function to process markdown and add line numbers to code blocks
-  const processMarkdownWithLineNumbers = (content: string) => {
-    // Basic processing to add line numbers to code blocks
-    return content.replace(/```(.+?)\n([\s\S]+?)```/g, (match: string, language: string, code: string) => {
-      const lines = code.trim().split('\n');
-      const numberedLines = lines.map((line: string, index: number) => 
-        `<span class="code-line" data-line-number="${index + 1}">${line}</span>`
-      ).join('\n');
+  // Synchronized scrolling between editor and preview
+  useEffect(() => {
+    if (!syncScrolling || !outputRef.current || !previewRef.current) return;
+
+    const handleEditorScroll = () => {
+      if (isScrolling || !syncScrolling) return;
       
-      return `\`\`\`${language}\n${numberedLines}\n\`\`\``;
-    });
-  };
+      const editor = outputRef.current;
+      const preview = previewRef.current;
+      
+      if (editor && preview) {
+        // Calculate relative scroll position
+        const editorScrollRatio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
+        
+        // Set the preview scroll position
+        setIsScrolling(true);
+        preview.scrollTop = editorScrollRatio * (preview.scrollHeight - preview.clientHeight || 1);
+        
+        // Reset the scrolling flag after a short delay
+        setTimeout(() => setIsScrolling(false), 50);
+      }
+    };
+    
+    const handlePreviewScroll = () => {
+      if (isScrolling || !syncScrolling) return;
+      
+      const editor = outputRef.current;
+      const preview = previewRef.current;
+      
+      if (editor && preview) {
+        // Calculate relative scroll position
+        const previewScrollRatio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight || 1);
+        
+        // Set the editor scroll position
+        setIsScrolling(true);
+        editor.scrollTop = previewScrollRatio * (editor.scrollHeight - editor.clientHeight || 1);
+        
+        // Reset the scrolling flag after a short delay
+        setTimeout(() => setIsScrolling(false), 50);
+      }
+    };
+    
+    // Add scroll event listeners
+    const editor = outputRef.current;
+    const preview = previewRef.current;
+    
+    if (editor && preview) {
+      editor.addEventListener('scroll', handleEditorScroll);
+      preview.addEventListener('scroll', handlePreviewScroll);
+    }
+    
+    return () => {
+      if (editor && preview) {
+        editor.removeEventListener('scroll', handleEditorScroll);
+        preview.removeEventListener('scroll', handlePreviewScroll);
+      }
+    };
+  }, [syncScrolling, isScrolling]);
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -368,7 +428,7 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
       <Script src="/markdown/to-markdown.js" strategy="beforeInteractive" />
       <Script src="/markdown/clipboard2markdown.js" strategy="afterInteractive" />
       
-      <div className="w-full min-h-screen px-4 py-4 relative">
+      <div className="w-full min-h-screen px-4 py-4 relative overflow-x-hidden">
         <div className="flex items-center justify-center mb-4 pt-2 relative">
           {mounted && (
             <div className="absolute right-[16px] -top-1">
@@ -393,17 +453,19 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
           contentEditable="true" 
           id="pastebin" 
           ref={pastebinRef} 
-          className="opacity-[0.01] w-full h-px overflow-hidden"
+          className="opacity-[0.01] w-full h-px overflow-hidden absolute"
+          style={{ position: 'absolute', zIndex: -1 }}
         ></div>
         
         <section 
-          className="h-[calc(100vh-120px)] mt-4 flex relative" 
+          className="flex h-[calc(100vh-120px)] mt-4 relative overflow-hidden" 
           id="wrapper" 
           ref={wrapperRef}
         >
           <div 
-            className="border border-border rounded-md h-full flex flex-col shadow-sm"
+            className="border border-border rounded-md h-full flex flex-col shadow-sm overflow-hidden"
             style={{ width: `${leftPaneWidth}%` }}
+            ref={leftPaneRef}
           >
             <div className="border-b border-border px-4 py-2.5 font-medium bg-muted/50">
               <div className="grid grid-cols-3 items-center w-full">
@@ -412,7 +474,7 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
                 </div>
                 
                 <div className="flex justify-center items-center">
-                  <div className="flex items-center gap-2" title={standardPasteEnabled ? "Disable standard paste" : "Enable standard paste"}>
+                  <div className="flex items-center gap-2" title={standardPasteEnabled ? "Disable standard paste to use Paste-to-Markdown converter" : "Enable standard paste to use clipboard while editing Markdown"}>
                     <Switch
                       id="standard-paste"
                       checked={standardPasteEnabled}
@@ -463,7 +525,7 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
                 </div>
               </div>
             </div>
-            <div className="relative flex-grow">
+            <div className="relative flex-grow overflow-auto">
               {showInputInstructions && (
                 <div 
                   className="absolute inset-0 flex items-top justify-center p-6 bg-background/90 z-10 cursor-text"
@@ -496,14 +558,22 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
                 className="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none bg-background"
                 placeholder="Type or paste Markdown here..."
                 ref={outputRef}
+                style={{ 
+                  minHeight: '100%',
+                  border: 'none',
+                  outline: 'none'
+                }}
               ></textarea>
             </div>
           </div>
           
           {/* Resizable handle */}
-          <div className="flex items-center justify-center mx-3" style={{ userSelect: 'none' }}>
+          <div 
+            className="flex items-center justify-center mx-3 z-10" 
+            style={{ userSelect: 'none' }}
+          >
             <div 
-              className="cursor-col-resize h-8 flex items-center justify-center"
+              className={`cursor-col-resize h-8 flex items-center justify-center relative ${isNearCenter ? 'snap-indicator' : ''}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 setIsDragging(true);
@@ -514,19 +584,53 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
                 <div className="h-6 w-0.5 bg-muted-foreground/40"></div>
                 <div className="h-6 w-0.5 bg-muted-foreground/40"></div>
               </div>
+              
+              {/* Center snap indicator */}
+              {isNearCenter && (
+                <div className="absolute -top-6 whitespace-nowrap text-xs px-2 py-1 bg-background border border-border rounded-md shadow-sm">
+                  Snap to center
+                </div>
+              )}
             </div>
           </div>
           
           <div 
-            className="border border-border rounded-md h-full flex flex-col shadow-sm"
+            className="border border-border rounded-md h-full flex flex-col shadow-sm overflow-hidden"
             style={{ width: `${100 - leftPaneWidth}%` }}
+            ref={rightPaneRef}
           >
-            <div className="border-b border-border px-4 py-3 font-medium bg-muted/50">
-              Preview
+            <div className="border-b border-border px-4 py-3 font-medium bg-muted/50 flex justify-between items-center">
+              <span>Preview</span>
+              <div className="flex items-center gap-2" title={syncScrolling ? "Disable synchronized scrolling" : "Enable synchronized scrolling"}>
+                <Switch
+                  id="sync-scrolling"
+                  checked={syncScrolling}
+                  onCheckedChange={setSyncScrolling}
+                  size="sm"
+                  className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600"
+                />
+                <Label 
+                  htmlFor="sync-scrolling" 
+                  className="text-xs cursor-pointer flex items-center gap-1"
+                  onClick={() => setSyncScrolling(!syncScrolling)}
+                >
+                  {syncScrolling ? (
+                    <>
+                      <Link size={12} />
+                      <span className="text-xs">Linked Scroll</span>
+                    </>
+                  ) : (
+                    <>
+                      <Link2Off size={12} />
+                      <span className="text-xs">Independent Scroll</span>
+                    </>
+                  )}
+                </Label>
+              </div>
             </div>
-            <div className="p-4 flex-1 overflow-auto">
+            <div className="p-4 overflow-auto h-full" ref={previewRef}>
               <div className="not-prose">
-                <Markdown>{processMarkdownWithLineNumbers(markdown)}</Markdown>
+                <Markdown>{markdown}</Markdown>
               </div>
             </div>
           </div>
@@ -553,35 +657,11 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
         
         /* Code content styling */
         .not-prose pre code {
-          counter-reset: line;
-          display: grid;
           padding: 0 !important;
           background-color: transparent !important;
           border-radius: 0 !important;
           white-space: pre !important;
           color: inherit !important;
-        }
-        
-        /* Create line numbers for each line */
-        .not-prose pre code > span,
-        .not-prose pre code > div {
-          position: relative;
-          padding-left: 1.5rem !important;
-          counter-increment: line;
-          min-height: 1.5rem;
-        }
-        
-        /* Line number styling */
-        .not-prose pre code > span::before,
-        .not-prose pre code > div::before {
-          content: counter(line);
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 1rem;
-          color: #71717a;
-          text-align: right;
-          user-select: none;
         }
         
         /* Styling for inline code */
@@ -593,14 +673,38 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
           font-size: 0.85em;
           white-space: normal;
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={copyMarkdown}
-                    className="h-7 text-xs"
-                  >
-                    Copy
-                  </Button>        }
+        }
+
+        /* Fix for scrollbar issues */
+        html, body {
+          overflow-x: hidden;
+          max-width: 100vw;
+        }
+
+        /* Ensure containers don't show unwanted scrollbars */
+        .overflow-hidden {
+          overflow: hidden !important;
+        }
+        
+        /* Fix for editor container */
+        .flex-grow.overflow-auto {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        /* Ensure textarea fills container and shows scrollbar */
+        textarea {
+          flex: 1;
+          overflow: auto;
+        }
+        
+        /* Snap indicator styling */
+        .snap-indicator .h-6 {
+          background-color: #3b82f6 !important; /* Blue color for the handle lines when near center */
+          height: 24px !important; /* Make the lines slightly taller */
+          transition: all 0.15s ease;
+        }
       `}</style>
     </>
   );
