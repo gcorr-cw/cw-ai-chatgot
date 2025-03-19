@@ -124,7 +124,17 @@ const PureChatItem = ({
           <TooltipTrigger asChild>
             <SidebarMenuButton asChild isActive={isActive}>
               <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
-                <span className="truncate">{chat.title}</span>
+                <div 
+                  className="w-full overflow-hidden"
+                  style={{
+                    maskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent 100%)'
+                  }}
+                >
+                  <span className="block whitespace-nowrap overflow-hidden">
+                    {chat.title}
+                  </span>
+                </div>
               </Link>
             </SidebarMenuButton>
           </TooltipTrigger>
@@ -138,7 +148,7 @@ const PureChatItem = ({
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
           <SidebarMenuAction
-            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground mr-0.5"
+            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground -ml-2 px-2"
             showOnHover={!isActive}
           >
             <MoreHorizontalIcon />
