@@ -23,6 +23,8 @@ export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   createdAt: timestamp('createdAt').notNull(),
   title: text('title').notNull(),
+  // Added tsvector column – make sure your DB trigger keeps this column up to date.
+  search_tsv: text('search_tsv'),
   userId: uuid('userId')
     .notNull()
     .references(() => user.id),
@@ -41,6 +43,8 @@ export const message = pgTable('Message', {
   role: varchar('role').notNull(),
   content: json('content').notNull(),
   createdAt: timestamp('createdAt').notNull(),
+  // Added tsvector column for message content.
+  search_tsv: text('search_tsv'),
 });
 
 export type Message = InferSelectModel<typeof message>;
@@ -71,6 +75,8 @@ export const document = pgTable(
     id: uuid('id').notNull().defaultRandom(),
     createdAt: timestamp('createdAt').notNull(),
     title: text('title').notNull(),
+    // Added tsvector column for document content.
+    search_tsv: text('search_tsv'),
     content: text('content'),
     kind: varchar('text', { enum: ['text', 'code', 'image', 'sheet'] })
       .notNull()

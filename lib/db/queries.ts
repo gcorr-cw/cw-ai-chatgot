@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { genSaltSync, hashSync } from 'bcrypt-ts';
-import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { sql as rawSql } from 'drizzle-orm';
 import postgres from 'postgres';
 
 import {
@@ -18,13 +19,61 @@ import {
 } from './schema';
 import { ArtifactKind } from '@/components/artifact';
 
-// Optionally, if not using email/pass login, you can
-// use the Drizzle adapter for Auth.js / NextAuth
-// https://authjs.dev/reference/adapter/drizzle
-
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
+
+/**
+ * Search Chat rows (by title) and their associated Message rows (by content)
+ * for the given userId, matching the provided query string using full-text search.
+ *
+ * Assumes you have GIN indexes on the "search_tsv" column of Chat and Message tables.
+ */
+export async function searchChatsByUser({
+  userId,
+  query,
+}: {
+  userId: string;
+  query: string;
+}) {
+  try {
+    console.log(`Searching for "${query}" for user ${userId}`);
+    
+    const results = await db
+      .select({
+        chat: chat,
+      })
+      .from(chat)
+      .leftJoin(message, eq(message.chatId, chat.id))
+      .where(
+        and(
+          eq(chat.userId, userId),
+          or(
+            // Full-text search on Chat using its search_tsv column
+            rawSql`${chat.search_tsv} @@ plainto_tsquery('english', ${query})`,
+            // Full-text search on Message using its search_tsv column
+            rawSql`${message.search_tsv} @@ plainto_tsquery('english', ${query})`
+          )
+        )
+      )
+      // Use groupBy to avoid duplicate Chat rows
+      .groupBy(chat.id)
+      .orderBy(desc(chat.createdAt));
+    
+    // Extract just the chat objects from the results
+    const chats = results.map(result => result.chat);
+    
+    console.log(`Search found ${chats.length} results`);
+    return chats;
+  } catch (error) {
+    console.error('Failed to search chats in database', error);
+    throw error;
+  }
+}
+
+// --------------------------------------------------------------------
+// The remainder of your existing queries below remains unchanged.
+// --------------------------------------------------------------------
 
 export async function getUser(email: string): Promise<Array<User>> {
   try {
@@ -277,9 +326,7 @@ export async function getSuggestionsByDocumentId({
       .from(suggestion)
       .where(and(eq(suggestion.documentId, documentId)));
   } catch (error) {
-    console.error(
-      'Failed to get suggestions by document version from database',
-    );
+    console.error('Failed to get suggestions by document version from database');
     throw error;
   }
 }
@@ -308,24 +355,21 @@ export async function deleteMessagesByChatIdAfterTimestamp({
         and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)),
       );
 
-    const messageIds = messagesToDelete.map((message) => message.id);
+    const messageIds = messagesToDelete.map((m) => m.id);
 
     if (messageIds.length > 0) {
       await db
         .delete(vote)
-        .where(
-          and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds)),
-        );
+        .where(and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds)));
 
       return await db
         .delete(message)
-        .where(
-          and(eq(message.chatId, chatId), inArray(message.id, messageIds)),
-        );
+        .where(and(eq(message.chatId, chatId), inArray(message.id, messageIds)));
     }
   } catch (error) {
     console.error(
       'Failed to delete messages by id after timestamp from database',
+      error,
     );
     throw error;
   }
@@ -354,10 +398,7 @@ export async function updateChatTitle({
   title: string;
 }) {
   try {
-    return await db
-      .update(chat)
-      .set({ title })
-      .where(eq(chat.id, id));
+    return await db.update(chat).set({ title }).where(eq(chat.id, id));
   } catch (error) {
     console.error('Failed to update chat title in database', error);
     throw error;

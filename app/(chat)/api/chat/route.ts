@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       ...userMessage,
       createdAt: new Date(),
       chatId: id,
+      search_tsv: null,
       content:
         typeof userMessage.content === 'string'
           ? {
@@ -395,6 +396,7 @@ export async function POST(request: Request) {
                         role: message.role,
                         content: message.content,
                         createdAt: new Date(),
+                        search_tsv: null,
                       }
                     }),
                   })
@@ -453,6 +455,7 @@ export async function POST(request: Request) {
                         role: message.role,
                         content: message.content,
                         createdAt: new Date(),
+                        search_tsv: null,
                       }
                     }),
                   })
