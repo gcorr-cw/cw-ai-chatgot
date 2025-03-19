@@ -50,13 +50,17 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
   const [markdown, setMarkdown] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
   const [showInputInstructions, setShowInputInstructions] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const [standardPasteEnabled, setStandardPasteEnabled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [leftPaneWidth, setLeftPaneWidth] = useState(50); // percentage width of left pane
+  const [isDragging, setIsDragging] = useState(false);
+  
   const { theme } = useTheme();
-  const pastebinRef = useRef<HTMLDivElement>(null);
-  const outputRef = useRef<HTMLTextAreaElement>(null);
   const { data: session } = useSession();
-  const isPastingRef = useRef(false);
+  const outputRef = useRef<HTMLTextAreaElement>(null);
+  const pastebinRef = useRef<HTMLDivElement>(null);
+  const isPastingRef = useRef<boolean>(false);
+  const wrapperRef = useRef<HTMLElement>(null);
 
   // Function to handle markdown changes in the textarea
   const handleMarkdownChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -271,6 +275,64 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
     };
   }, [standardPasteEnabled]);
 
+  useEffect(() => {
+    // Add event listener for mousemove and mouseup for resizing
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !wrapperRef.current) return;
+      
+      // Prevent text selection during resize
+      e.preventDefault();
+      
+      const wrapperRect = wrapperRef.current.getBoundingClientRect();
+      const containerWidth = wrapperRect.width;
+      const newPosition = e.clientX - wrapperRect.left;
+      const centerPosition = containerWidth / 2;
+      
+      // Calculate the new width percentage
+      let leftPaneWidth = Math.max(20, Math.min(80, (newPosition / containerWidth) * 100));
+      
+      // Snap to center when within 10px of the center (20px total snap area)
+      if (Math.abs(newPosition - centerPosition) < 40) {
+        leftPaneWidth = 50;
+      }
+      
+      const rightPaneWidth = 100 - leftPaneWidth;
+      
+      // Apply the new widths
+      wrapperRef.current.style.gridTemplateColumns = `${leftPaneWidth}% ${rightPaneWidth}%`;
+      setLeftPaneWidth(leftPaneWidth);
+    };
+    
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+    
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Add effect to disable text selection when dragging
+  useEffect(() => {
+    const handleSelectStart = (e: Event) => {
+      if (isDragging) {
+        e.preventDefault();
+      }
+    };
+    
+    document.addEventListener('selectstart', handleSelectStart);
+    
+    return () => {
+      document.removeEventListener('selectstart', handleSelectStart);
+    };
+  }, [isDragging]);
+
   // Custom function to process markdown and add line numbers to code blocks
   const processMarkdownWithLineNumbers = (content: string) => {
     // Basic processing to add line numbers to code blocks
@@ -324,7 +386,7 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
               />
             </div>
           )}
-          <h1 className="text-3xl font-bold">Markdown Utility</h1>
+          <h1 className="text-3xl font-bold translate-y-1">Markdown Utility</h1>
         </div>
         
         <section id="info" className={`my-4 ${showInstructions ? '' : 'hidden'}`}>
@@ -348,110 +410,137 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
           className="opacity-[0.01] w-full h-px overflow-hidden"
         ></div>
         
-        <section className="h-[calc(100vh-120px)] mt-4" id="wrapper">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-            <div className="border border-border rounded-md h-full flex flex-col shadow-sm">
-              <div className="border-b border-border px-4 py-2 font-medium bg-muted/20">
-                <div className="grid grid-cols-3 items-center w-full">
-                  <div className="flex justify-start">
-                    <span>Paste-to-Markdown</span>
-                  </div>
-                  
-                  <div className="flex justify-center items-center">
-                    <div className="flex items-center gap-2" title={standardPasteEnabled ? "Disable standard paste" : "Enable standard paste"}>
-                      <Switch
-                        id="standard-paste"
-                        checked={standardPasteEnabled}
-                        onCheckedChange={setStandardPasteEnabled}
-                        size="sm"
-                        className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600"
-                      />
-                      <Label 
-                        htmlFor="standard-paste" 
-                        className="text-xs cursor-pointer"
-                        onClick={() => setStandardPasteEnabled(!standardPasteEnabled)}
-                      >
-                        <span className="text-xs">Standard Paste</span>
-                      </Label>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={clearMarkdown}
-                        className="h-7 text-xs"
-                        title="Clear content"
-                      >
-                        <X size={16} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={pasteFromClipboard}
-                        className="h-7 text-xs"
-                        title="Paste from clipboard"
-                      >
-                        <Clipboard size={16} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={copyMarkdown}
-                        className="h-7 text-xs"
-                        title="Copy to clipboard"
-                      >
-                        <CopyIcon size={18} />
-                      </Button>
-                    </div>
+        <section 
+          className="h-[calc(100vh-120px)] mt-4 flex relative" 
+          id="wrapper" 
+          ref={wrapperRef}
+        >
+          <div 
+            className="border border-border rounded-md h-full flex flex-col shadow-sm"
+            style={{ width: `${leftPaneWidth}%` }}
+          >
+            <div className="border-b border-border px-4 py-2.5 font-medium bg-muted/50">
+              <div className="grid grid-cols-3 items-center w-full">
+                <div className="flex justify-start">
+                  <span>Paste-to-Markdown</span>
+                </div>
+                
+                <div className="flex justify-center items-center">
+                  <div className="flex items-center gap-2" title={standardPasteEnabled ? "Disable standard paste" : "Enable standard paste"}>
+                    <Switch
+                      id="standard-paste"
+                      checked={standardPasteEnabled}
+                      onCheckedChange={setStandardPasteEnabled}
+                      size="sm"
+                      className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-600"
+                    />
+                    <Label 
+                      htmlFor="standard-paste" 
+                      className="text-xs cursor-pointer"
+                      onClick={() => setStandardPasteEnabled(!standardPasteEnabled)}
+                    >
+                      <span className="text-xs">Standard Paste</span>
+                    </Label>
                   </div>
                 </div>
-              </div>
-              <div className="relative flex-grow">
-                {showInputInstructions && (
-                  <div 
-                    className="absolute inset-0 flex items-center justify-center p-6 bg-background/90 z-10 cursor-text"
-                    onClick={handleTextareaFocus}
-                  >
-                    <div className="text-center max-w-md">
-                      <h2 className="text-lg font-bold mb-4">Options:</h2>
-                      <ol className="text-left space-y-4 mb-6">
-                        <li>
-                          <strong>Paste to Markdown:</strong>
-                          <p className="text-muted-foreground">Paste content from documents or web pages to have it converted to Markdown.</p>
-                        </li>
-                        <li>
-                          <strong>Edit Markdown:</strong> 
-                          <p className="text-muted-foreground">Enter and edit Markdown here and see it rendered in the Preview pane.</p>
-                        </li>
-                      </ol>
-                      <p className="text-sm text-muted-foreground">Click anywhere to begin</p>
-                    </div>
+                
+                <div className="flex justify-end">
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearMarkdown}
+                      className="h-7 w-7 p-0 text-xs"
+                      title="Clear content"
+                    >
+                      <X size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={pasteFromClipboard}
+                      className="h-7 w-7 p-0 text-xs"
+                      title="Paste from clipboard"
+                    >
+                      <Clipboard size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyMarkdown}
+                      className="h-7 w-7 p-0 text-xs"
+                      title="Copy to clipboard"
+                    >
+                      <CopyIcon size={16} />
+                    </Button>
                   </div>
-                )}
-                <textarea
-                  value={markdown}
-                  onChange={handleMarkdownChange}
-                  onClick={handleTextareaFocus}
-                  onFocus={handleTextareaFocus}
-                  onPaste={handleTextareaPaste}
-                  className="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none bg-background"
-                  placeholder="Type or paste Markdown here..."
-                  ref={outputRef}
-                ></textarea>
+                </div>
               </div>
             </div>
-            
-            <div className="border border-border rounded-md h-full flex flex-col shadow-sm">
-              <div className="border-b border-border px-4 py-2 font-medium bg-muted/20">
-                Preview
-              </div>
-              <div className="p-4 flex-1 overflow-auto">
-                <div className="not-prose">
-                  <Markdown>{processMarkdownWithLineNumbers(markdown)}</Markdown>
+            <div className="relative flex-grow">
+              {showInputInstructions && (
+                <div 
+                  className="absolute inset-0 flex items-top justify-center p-6 bg-background/90 z-10 cursor-text"
+                  onClick={handleTextareaFocus}
+                >
+                  <div className="text-center max-w-md">
+                    <br />
+                    <br />
+                    <h2 className="text-lg font-bold mb-4">Options:</h2>
+                    <ol className="text-left space-y-4 mb-6">
+                      <li>
+                        <strong>Paste to Markdown:</strong>
+                        <p className="text-muted-foreground">Converts text from documents or web pages into Markdown.</p>
+                      </li>
+                      <li>
+                        <strong>Edit Markdown:</strong> 
+                        <p className="text-muted-foreground">Edit Markdown and view the rendered output.</p>
+                      </li>
+                    </ol>
+                    <p className="text-sm text-muted-foreground"></p>
+                  </div>
                 </div>
+              )}
+              <textarea
+                value={markdown}
+                onChange={handleMarkdownChange}
+                onClick={handleTextareaFocus}
+                onFocus={handleTextareaFocus}
+                onPaste={handleTextareaPaste}
+                className="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none bg-background"
+                placeholder="Type or paste Markdown here..."
+                ref={outputRef}
+              ></textarea>
+            </div>
+          </div>
+          
+          {/* Resizable handle */}
+          <div className="flex items-center justify-center mx-3" style={{ userSelect: 'none' }}>
+            <div 
+              className="cursor-col-resize h-8 flex items-center justify-center"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              style={{ userSelect: 'none' }}
+            >
+              <div className="flex space-x-1">
+                <div className="h-6 w-0.5 bg-muted-foreground/40"></div>
+                <div className="h-6 w-0.5 bg-muted-foreground/40"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div 
+            className="border border-border rounded-md h-full flex flex-col shadow-sm"
+            style={{ width: `${100 - leftPaneWidth}%` }}
+          >
+            <div className="border-b border-border px-4 py-3 font-medium bg-muted/50">
+              Preview
+            </div>
+            <div className="p-4 flex-1 overflow-auto">
+              <div className="not-prose">
+                <Markdown>{processMarkdownWithLineNumbers(markdown)}</Markdown>
               </div>
             </div>
           </div>
