@@ -1,9 +1,7 @@
-import type { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Text Comparison',
-  description: 'Compare two versions of text and see the differences',
-};
+import { ThemeProvider } from '@/components/theme-provider';
+import { SessionProvider } from 'next-auth/react';
 
 export default function DiffViewLayout({
   children,
@@ -11,8 +9,17 @@ export default function DiffViewLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="flex-1 p-4 md:p-6">{children}</main>
+    <div className="antialiased">
+      <SessionProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </SessionProvider>
     </div>
   );
 }

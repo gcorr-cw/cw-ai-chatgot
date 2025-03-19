@@ -369,13 +369,13 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
       <Script src="/markdown/clipboard2markdown.js" strategy="afterInteractive" />
       
       <div className="w-full min-h-screen px-4 py-4 relative">
-        {mounted && (
-          <div className="absolute top-4 right-4">
-            <UserNavWrapper user={session?.user} />
-          </div>
-        )}
-        
-        <div className="flex items-center justify-center mb-4 pt-2">
+        <div className="flex items-center justify-center mb-4 pt-2 relative">
+          {mounted && (
+            <div className="absolute right-[16px] -top-1">
+              <UserNavWrapper user={session?.user} />
+            </div>
+          )}
+          
           {mounted && (
             <div className="w-10 h-10 mr-3">
               <img 
@@ -388,21 +388,7 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
           )}
           <h1 className="text-3xl font-bold translate-y-1">Markdown Utility</h1>
         </div>
-        
-        <section id="info" className={`my-4 ${showInstructions ? '' : 'hidden'}`}>
-          <h2 className="text-3xl font-bold mb-4">Paste to Markdown</h2>
-          <h3 className="text-xl mb-4 italic">Instructions</h3>
-          <ol className="list-decimal pl-6 mb-6 space-y-2">
-            <li>Find the text to convert to Markdown (<i>e.g.</i>, in another browser tab)</li>
-            <li>Copy it to the clipboard (<code className="bg-zinc-100 dark:bg-zinc-800 py-0.5 px-1 rounded-md text-sm">Ctrl+C</code>)</li>
-            <li>Paste it into this window (<code className="bg-zinc-100 dark:bg-zinc-800 py-0.5 px-1 rounded-md text-sm">Ctrl+V</code>)</li>
-            <li>The converted Markdown will appear!</li>
-          </ol>
-          <p className="text-muted-foreground">
-            The conversion is carried out by <a href="https://github.com/domchristie/to-markdown" className="text-blue-600 dark:text-blue-400 hover:underline">to-markdown</a>, a Markdown converter written in JavaScript and running locally in the browser.
-          </p>
-        </section>
-        
+            
         <div 
           contentEditable="true" 
           id="pastebin" 
@@ -607,7 +593,14 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
           font-size: 0.85em;
           white-space: normal;
-        }
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyMarkdown}
+                    className="h-7 text-xs"
+                  >
+                    Copy
+                  </Button>        }
       `}</style>
     </>
   );
