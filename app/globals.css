@@ -21,6 +21,15 @@
         text-wrap: balance;
     }
 
+    /* Remove focus outlines from sidebar menu buttons */
+    .sidebar-menu button,
+    .sidebar-menu [role="button"],
+    .sidebar-menu a,
+    .dropdown-menu-trigger {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
     /* Markdown content styling */
     .inline-code-wrapper {
         display: inline !important;

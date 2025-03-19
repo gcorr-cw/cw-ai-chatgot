@@ -8,6 +8,7 @@ import type { User } from 'next-auth';
 import { memo, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR from 'swr';
+import { WandSparkles } from 'lucide-react';
 
 import {
   CheckCircleFillIcon,
@@ -86,6 +87,7 @@ const PureChatItem = ({
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [newTitle, setNewTitle] = useState(chat.title);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [isAutoRenaming, setIsAutoRenaming] = useState(false);
 
   const formattedDate = format(new Date(chat.createdAt), 'MMM d, yyyy h:mm a');
 
@@ -114,6 +116,37 @@ const PureChatItem = ({
     } finally {
       setIsRenaming(false);
       setShowRenameDialog(false);
+    }
+  };
+
+  const handleAutoRename = async () => {
+    setIsAutoRenaming(true);
+    try {
+      // Call the server action to generate a new title based on chat history
+      const response = await fetch('/api/chat/auto-rename', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatId: chat.id }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.title) {
+          // Update the chat title in the UI
+          chat.title = data.title;
+          toast.success('Chat renamed successfully');
+        } else {
+          toast.error('Failed to generate a new title');
+        }
+      } else {
+        toast.error('Failed to rename chat');
+      }
+    } catch (error) {
+      toast.error('An error occurred while renaming the chat');
+    } finally {
+      setIsAutoRenaming(false);
     }
   };
 
@@ -199,7 +232,7 @@ const PureChatItem = ({
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
           <SidebarMenuAction
-            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground -ml-2 px-2"
+            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground -ml-2 px-2 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
             showOnHover={!isActive}
           >
             <MoreHorizontalIcon />
@@ -217,6 +250,14 @@ const PureChatItem = ({
           >
             <PencilEditIcon />
             <span>Rename</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onSelect={handleAutoRename}
+          >
+            <WandSparkles />
+            <span>Auto Rename</span>
           </DropdownMenuItem>
 
           <DropdownMenuSub>
