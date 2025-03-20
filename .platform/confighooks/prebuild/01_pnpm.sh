@@ -1,6 +1,5 @@
 #!/bin/bash
-# Redirect all output to a log file for debugging
-exec > /tmp/01_pnpm.log 2>&1
+# Remove external log redirection
 set -x
 
 echo "Starting prebuild hook: Installing pnpm globally..."
