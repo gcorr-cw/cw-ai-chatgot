@@ -38,13 +38,17 @@ Do not update document right after creating it. Wait for user feedback or reques
 export const regularPrompt =
   'You are a friendly assistant for Central Willamette Credit Union employees! Keep your responses helpful. Use formatting. When asked about current events or real-time information or when you are asked to search the web for browse a URL, you can use the web search tool to provide up-to-date information.';
 
+export const reasoningPrompt =
+  'Formatting re-enabled\n' + 'You are a friendly assistant for Central Willamette Credit Union employees! Keep your responses helpful. Use formatting. When asked about current events or real-time information or when you are asked to search the web for browse a URL, you can use the web search tool to provide up-to-date information.';
+
 export const systemPrompt = ({
   selectedChatModel,
 }: {
   selectedChatModel: string;
 }) => {
   if (selectedChatModel === 'chat-model-reasoning') {
-    return regularPrompt;
+    // Use the reasoning prompt that includes "Formatting re-enabled"
+    return reasoningPrompt;
   } else if (selectedChatModel === 'claude-sonnet') {
     // Add more restrictive prompt for Claude Sonnet to reduce artifact creation
     return `${regularPrompt}\n\n${artifactsPrompt}\n\nIMPORTANT: Be very conservative about creating documents. Only create documents when explicitly requested by the user. For tables, lists, and simple content, use markdown formatting in the chat instead of creating a document. Do not create documents for simple tables or data visualization.`;
