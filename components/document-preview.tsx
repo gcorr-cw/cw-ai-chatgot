@@ -94,6 +94,7 @@ export function DocumentPreview({
           id: artifact.documentId,
           createdAt: new Date(),
           userId: 'noop',
+          search_tsv: null,
         }
       : null;
 

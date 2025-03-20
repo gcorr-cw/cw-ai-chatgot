@@ -444,7 +444,7 @@ export function SidebarHistory({ user, searchQuery }: { user: User | undefined, 
               </div>
             ))}
             <div className="px-2 py-3 text-zinc-500 flex flex-col items-center text-center">
-              <p className="text-xs opacity-75 italic">Sorry I'm so slow... I will get faster!</p>
+              <p className="text-xs opacity-75 italic">Sorry I&apos;m so slow... I will get faster!</p>
             </div>
           </div>
         </SidebarGroupContent>
@@ -490,7 +490,7 @@ export function SidebarHistory({ user, searchQuery }: { user: User | undefined, 
             {searchQuery?.trim() 
               ? (
                 <>
-                  <p>No chats found matching "{searchQuery}"</p>
+                  <p>No chats found matching &quot;{searchQuery}&quot;</p>
                   <p className="text-xs opacity-75">Try a different search term</p>
                 </>
               ) 
@@ -515,7 +515,7 @@ export function SidebarHistory({ user, searchQuery }: { user: User | undefined, 
       <SidebarGroup>
         <SidebarGroupContent>
           <div className="px-2 text-zinc-500 w-full flex flex-col items-center text-sm gap-2 py-4">
-            <p>No chats found matching "{searchQuery}"</p>
+            <p>No chats found matching &quot;{searchQuery}&quot;</p>
             <p className="text-xs opacity-75">Try a different search term</p>
           </div>
         </SidebarGroupContent>
