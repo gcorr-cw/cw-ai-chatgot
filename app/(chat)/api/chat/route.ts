@@ -366,6 +366,8 @@ export async function POST(request: Request) {
             onFinish: async ({ response, sources }) => {
               if (session.user?.id) {
                 try {
+                  //console.log('Raw LLM Response (responses API):', JSON.stringify(response, null, 2));
+                  
                   console.log('Response finished, sources:', sources);
                   
                   // Add sources from web search if available
@@ -442,6 +444,8 @@ export async function POST(request: Request) {
             onFinish: async ({ response, reasoning }) => {
               if (session.user?.id) {
                 try {
+                  //console.log('Raw LLM Response (standard API):', JSON.stringify(response, null, 2));
+                  
                   const sanitizedResponseMessages = sanitizeResponseMessages({
                     messages: response.messages,
                     reasoning,
