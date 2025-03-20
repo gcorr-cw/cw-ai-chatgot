@@ -47,10 +47,38 @@
         line-height: 1.5;
     }
 
-    /* .markdown-content p {
+    /* Only apply paragraph margin to assistant messages, not user messages */
+    [data-role="assistant"] .markdown-content p {
         margin-bottom: 1em;
         display: block;
-    } */
+    }
+
+    /* Add paragraph spacing to markdown in the markdown editor page */
+    .not-prose .markdown-content p {
+        margin-bottom: 1em;
+        display: block;
+    }
+
+    /* Blockquote styling */
+    .markdown-content blockquote,
+    .markdown-content .blockquote {
+        border-left: 6px solid #d1d5db;
+        padding: 0.5rem 1rem;
+        margin-left: 0;
+        margin-right: 0;
+        margin-bottom: 1em;
+        color: #6b7280;
+        background-color: #f3f4f6;
+        border-radius: 0.25rem;
+    }
+
+    /* Dark mode blockquote styling */
+    .dark .markdown-content blockquote,
+    .dark .markdown-content .blockquote {
+        border-left-color: #4a4a4a;
+        color: #b5b5b5;
+        background-color: #2e2e2e;
+    }
 
     .markdown-content a {
         color: #0969da;
@@ -63,6 +91,17 @@
 
     .markdown-content strong {
         font-weight: 600;
+    }
+    
+    /* Definition lists - make terms bold */
+    .markdown-content dt {
+        font-weight: 700;
+        margin-top: 1em;
+    }
+    
+    .markdown-content dd {
+        margin-left: 1.5em;
+        margin-bottom: 1em;
     }
 
     .markdown-content h1, 
@@ -127,11 +166,13 @@
         font-size: 85%;
         white-space: normal;
         word-break: break-word;
+        color: #24292f; /* Darker text color for better contrast in light mode */
     }
 
     /* Dark mode styles for inline code */
     .dark .markdown-content code:not(pre code) {
         background-color: rgba(99, 99, 99, 0.3); /* Darker inline code background for dark mode */
+        color: #e6edf3; /* Lighter text color for better contrast in dark mode */
     }
     
     .dark .markdown-content a {
@@ -176,7 +217,7 @@
         border-color: rgba(80, 80, 80, 0.5);
     }
 
-    .dark .markdown-content table th,
+    .markdown-content table th,
     .dark .markdown-content table td {
         border-color: rgba(80, 80, 80, 0.5);
     }
