@@ -170,7 +170,7 @@ const PureChatItem = ({
                   <span className="block whitespace-nowrap overflow-hidden">
                     {chat.title}
                   </span>
-                  {chat.matchType && (
+                  {SHOW_SEARCH_MATCH_INDICATORS && chat.matchType && (
                     <span className="text-xs mt-0.5 block">
                       {chat.matchType === 'title' && (
                         <span className="bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-sm">
@@ -201,7 +201,7 @@ const PureChatItem = ({
           <TooltipContent side="right" align="start" className="flex flex-col">
             <span>{chat.title}</span>
             <span className="text-xs text-foreground/50">{formattedDate}</span>
-            {chat.matchType && (
+            {SHOW_SEARCH_MATCH_INDICATORS && chat.matchType && (
               <span className="text-xs text-foreground/70 mt-1">
                 {chat.matchType === 'title' && (
                   <span className="bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-sm">
@@ -257,7 +257,7 @@ const PureChatItem = ({
             onSelect={handleAutoRename}
           >
             <WandSparkles />
-            <span>Auto Rename</span>
+            <span>Auto rename</span>
           </DropdownMenuItem>
 
           <DropdownMenuSub>
@@ -344,6 +344,9 @@ export const ChatItem = memo(PureChatItem, (prevProps, nextProps) => {
   if (prevProps.isActive !== nextProps.isActive) return false;
   return true;
 });
+
+// Feature flag to show/hide search match type indicators
+const SHOW_SEARCH_MATCH_INDICATORS = false;
 
 export function SidebarHistory({ user, searchQuery }: { user: User | undefined, searchQuery?: string }) {
   const { setOpenMobile } = useSidebar();

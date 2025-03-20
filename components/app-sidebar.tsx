@@ -35,10 +35,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     // Listen for custom event for advanced options changes
     const handleAdvancedOptionsChange = (e: CustomEvent) => {
       setAdvancedOptionsEnabled(e.detail.enabled);
-      // Hide search if advanced options are disabled
-      if (!e.detail.enabled) {
-        setShowSearch(false);
-      }
     };
     
     // Add event listener for the custom event
@@ -86,21 +82,19 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               </span>
             </Link>
             <div className="flex items-center gap-1">
-              {advancedOptionsEnabled && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      className={`p-2 h-fit ${showSearch ? 'text-primary' : ''}`}
-                      onClick={() => setShowSearch(!showSearch)}
-                    >
-                      <Search size={18} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent align="end">Search Chats</TooltipContent>
-                </Tooltip>
-              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className={`p-2 h-fit ${showSearch ? 'text-primary' : ''}`}
+                    onClick={() => setShowSearch(!showSearch)}
+                  >
+                    <Search size={18} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent align="end">Search Chats</TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -120,7 +114,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               </Tooltip>
             </div>
           </div>
-          {showSearch && advancedOptionsEnabled && (
+          {showSearch && (
             <div className="mt-2 px-1 relative">
               <Input
                 id="chat-search"
