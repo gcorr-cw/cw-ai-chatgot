@@ -86,10 +86,10 @@ export function UserNav({ user }: { user: User }) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/markdown" className="flex items-center gap-2 cursor-pointer">
+              <a href="/markdown" className="flex items-center gap-2 cursor-pointer">
                 <FileText className="h-4 w-4" />
                 Markdown utility
-              </Link>
+              </a>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/diffview" className="flex items-center gap-2 cursor-pointer">

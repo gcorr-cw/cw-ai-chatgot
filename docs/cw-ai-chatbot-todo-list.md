@@ -15,7 +15,7 @@ ai-chatbot-3-Todos
 
 ## Pilot testing launch punch list
 * Enable speech-to-text input.
-* Implement email OTP and Forgot password.
+* Fix issues with attachment uploads failing if the first attempt failed or got blocked.* Implement email OTP and Forgot password.
 * Where to house production site, I think we need to start leadership/IT beta in production to allow sensitive info. This will also allow dev to continue in sandbox without conflicting with production services and backend resources (EB/S3/RDS).
 * System sizing.
 * What URL do we use for production? Internal only with internally signed cert?
@@ -23,9 +23,8 @@ ai-chatbot-3-Todos
 * Make sidebar open by default for new users.
 * Remove vote DB queries, this will multiple with more users!
 * Fix resume scroll down icon so it doesn't overlap the input box when the input box grows due to long text input.
-* Fix issues with attachment uploads failing if the first attempt failed or got blocked.
 * Reset model to default on new chat or when selecting an existing chat, if o3mini is selected
-* Fix o3 mini response markdown rendering w/ `──────────────────────────────`. Find out what is returned by the LLM in the raw response.
+
 
 ## Production todos:
 * Move sensitive environment variables to AWS SSM or some secure solution
@@ -85,6 +84,8 @@ Fixed:
 * Fix narrow view right side overflow
 * Copy AI assitant message function is broken, it only copies the first word or drops the last word or few words
 * Fix mic text output line wrap below attach and mic icons
+* Fix o3 mini response markdown rendering w/ `──────────────────────────────`. Find out what is returned by the LLM in the raw response.
+
 
 # Dev notes:
 ===========
@@ -95,7 +96,6 @@ Fixed:
 * .platform\confighooks\prebuild\01_pnpm.sh
 * .platform\hooks\prebuild\01_pnpm.sh
 		
-		exec > /tmp/01_pnpm.log 2>&1
 		set -x
 		echo "Starting prebuild hook: Installing pnpm globally..."
 		npm install -g pnpm --verbose
@@ -123,6 +123,7 @@ old: pnpm install pdf-parse
 
 ### misc commands
 npx tsc --noEmit
+npx eslint .
 
 ### SSH server commands
 ssh.exe -i BeanStalk.pem ec2-user@cw-ai-chatbot-4.us-west-2.elasticbeanstalk.com
