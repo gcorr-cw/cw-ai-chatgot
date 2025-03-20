@@ -641,18 +641,24 @@ export default function MarkdownConverter({}: MarkdownConverterProps) {
       <style jsx global>{`
         /* Base styling for code blocks */
         .not-prose pre {
-          background-color: #18181b !important;
-          color: #e4e4e7 !important;
-          border: 1px solid #3f3f46 !important;
-          border-radius: 0.75rem !important;
-          padding: 1rem !important;
           margin-bottom: 1.5rem !important;
           overflow-x: auto !important;
           position: relative !important;
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-          font-size: 0.875rem !important;
           line-height: 1.5 !important;
           display: block !important;
+        }
+        
+        /* Remove double borders from syntax highlighter in markdown utility only */
+        .not-prose > div > div.w-full.overflow-hidden {
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
+        /* Ensure the syntax highlighter container fits properly */
+        .not-prose pre > div {
+          margin: 0 !important;
+          border-radius: 0.75rem !important;
         }
         
         /* Code content styling */
