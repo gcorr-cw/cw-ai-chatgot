@@ -241,9 +241,9 @@ export function useScrollToBottom<T extends HTMLElement>(): [
         return;
       }
       
-      // Throttle scroll events (process max once per 50ms)
+      // Throttle scroll events (process max once per 20ms)
       const now = Date.now();
-      if (now - lastScrollEvent.current < 50) return;
+      if (now - lastScrollEvent.current < 20) return;
       lastScrollEvent.current = now;
       
       const { scrollTop, scrollHeight, clientHeight } = container;
@@ -266,6 +266,9 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       // Determine scroll direction
       const currentDirection = scrollTop < scrollState.previousScrollTop ? 'up' : 'down';
       
+      // Calculate scroll amount since last check
+      const scrollDelta = Math.abs(scrollTop - scrollState.previousScrollTop);
+      
       // If direction changed, record the time
       if (scrollState.lastDirection !== currentDirection) {
         scrollState.lastDirection = currentDirection;
@@ -276,19 +279,13 @@ export function useScrollToBottom<T extends HTMLElement>(): [
       // Update previous scroll position for next comparison
       scrollState.previousScrollTop = scrollTop;
       
-      // Don't change auto-scroll state immediately after direction change (prevent stuttering)
-      // Give a 300ms buffer after direction change
-      if (now - scrollState.directionChangeTime < 300) {
-        return;
-      }
-      
       // Case 1: User scrolled up - disable auto-scroll for current response
-      if (scrollTop > 5 && currentDirection === 'up') {
-        const scrollBuffer = 30; // Allow some wiggle room for determining if at bottom
+      if (currentDirection === 'up' && scrollDelta > 5) {
+        const scrollBuffer = 50; // Allow more wiggle room for determining if at bottom
         const isAtBottom = Math.abs((scrollTop + clientHeight) - scrollHeight) < scrollBuffer;
         
         if (!isAtBottom) {
-          log('SCROLL', '👆 User scrolled up', { scrollTop });
+          log('SCROLL', '👆 User scrolled up', { scrollTop, scrollDelta });
           disableAutoScrollForCurrentResponse();
         }
       }
@@ -319,6 +316,32 @@ export function useScrollToBottom<T extends HTMLElement>(): [
     let messageChangeCount = 0;
     let lastMessageChangeTime = 0;
     let isFirstMutation = true;
+    // Track the last time user manually scrolled
+    let lastUserScrollTime = 0;
+    
+    // Function to check if user recently scrolled
+    const hasRecentUserScroll = () => {
+      return Date.now() - lastUserScrollTime < 1000; // Consider scrolls within the last second
+    };
+    
+    // Function to check if user has moved away from bottom
+    const isUserScrolledAway = () => {
+      if (!container) return false;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // More sensitive threshold - just 30px away from bottom is considered "scrolled away"
+      return Math.abs((scrollTop + clientHeight) - scrollHeight) > 30;
+    };
+    
+    // Update the last user scroll time when scroll events happen
+    const userScrollHandler = () => {
+      // Only track if it's not our programmatic scrolling
+      if (!programmaticScrolling.current) {
+        lastUserScrollTime = Date.now();
+      }
+    };
+    
+    // Add event listener for user scrolls
+    container.addEventListener('scroll', userScrollHandler, { passive: true });
     
     const observer = new MutationObserver((mutations) => {
       // Skip empty mutation batches
@@ -369,12 +392,19 @@ export function useScrollToBottom<T extends HTMLElement>(): [
         messageChangeCount,
         autoScrollEnabled: autoScrollEnabled.current,
         currentResponseId: currentResponseId.current,
-        isInDisabledList: isAutoScrollDisabledForCurrentResponse()
+        isInDisabledList: isAutoScrollDisabledForCurrentResponse(),
+        recentUserScroll: hasRecentUserScroll(),
+        userScrolledAway: isUserScrolledAway()
       });
       
-      // For content updates, only skip auto-scroll if specifically disabled for this response
-      if (isAutoScrollDisabledForCurrentResponse()) {
-        log('STREAM', '⛔ Auto-scroll specifically disabled for this response - skipping scroll');
+      // For content updates, skip auto-scroll if:
+      // 1. Auto-scroll is specifically disabled for this response, OR
+      // 2. User has recently scrolled AND is not at the bottom
+      if (
+        isAutoScrollDisabledForCurrentResponse() || 
+        (hasRecentUserScroll() && isUserScrolledAway())
+      ) {
+        log('STREAM', '⛔ Skipping auto-scroll due to user activity or disabled state');
         return;
       }
       
@@ -394,6 +424,7 @@ export function useScrollToBottom<T extends HTMLElement>(): [
     });
     
     return () => {
+      container.removeEventListener('scroll', userScrollHandler);
       observer.disconnect();
       log('CLEANUP', 'Disconnected mutation observer');
     };
