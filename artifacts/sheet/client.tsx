@@ -1,6 +1,7 @@
 import { Artifact } from '@/components/create-artifact';
 import {
   CopyIcon,
+  DownloadIcon,
   LineChartIcon,
   RedoIcon,
   SparklesIcon,
@@ -86,6 +87,40 @@ export const sheetArtifact = new Artifact<'sheet', Metadata>({
 
         navigator.clipboard.writeText(cleanedCsv);
         toast.success('Copied csv to clipboard!');
+      },
+    },
+    {
+      icon: <DownloadIcon />,
+      description: 'Download as .csv',
+      onClick: ({ content }) => {
+        const parsed = parse<string[]>(content, { skipEmptyLines: true });
+
+        const nonEmptyRows = parsed.data.filter((row) =>
+          row.some((cell) => cell.trim() !== ''),
+        );
+
+        const cleanedCsv = unparse(nonEmptyRows);
+        
+        // Create a blob from the CSV content
+        const blob = new Blob([cleanedCsv], { type: 'text/csv;charset=utf-8;' });
+        
+        // Create a URL for the blob
+        const url = URL.createObjectURL(blob);
+        
+        // Create a temporary anchor element to trigger the download
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'spreadsheet.csv');
+        
+        // Append to the document, click to download, and clean up
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Release the URL object
+        URL.revokeObjectURL(url);
+        
+        toast.success('CSV file downloaded!');
       },
     },
   ],
