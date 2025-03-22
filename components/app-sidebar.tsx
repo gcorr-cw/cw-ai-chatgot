@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { Input } from './ui/input';
+import { SidebarToggle } from '@/components/sidebar-toggle';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -75,11 +76,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               }}
               className="flex flex-row gap-3 items-center"
             >
-              <span 
-                className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer text-[#d14810] dark:text-gray-200"
-              >
-                CW-ChatGPT
-              </span>
+              <SidebarToggle />
             </Link>
             <div className="flex items-center gap-1">
               <Tooltip>
