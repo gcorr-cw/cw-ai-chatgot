@@ -15,13 +15,9 @@ const authFormSchema = z.object({
 // Helper function to fetch allowed usernames from S3
 async function fetchAllowedUsernamesFromS3(): Promise<string[]> {
   try {
-    const bucketName = process.env.ALLOWED_USERS_S3_BUCKET_NAME;
+    // Hardcoded bucket name for development
+    const bucketName = 'cw-ai-chatbot-eb-allowed-beta-users';
     const fileName = 'cw-ai-chatbot-allowed-beta-users.txt';
-    
-    if (!bucketName) {
-      console.warn('ALLOWED_USERS_S3_BUCKET_NAME not set, falling back to env var');
-      return process.env.ALLOWED_USERNAMES?.split(',').map(u => u.trim()) || [];
-    }
     
     // Use us-west-2 region as indicated by the error message
     const s3Client = new S3Client({ 
